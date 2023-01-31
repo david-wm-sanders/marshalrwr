@@ -16,3 +16,10 @@ async-trait = "0.1.64"
 serde = { version = "1.0.152", features = ["derive"] }
 thiserror = "1.0.38"
 validator = { version = "0.16.0", features = ["derive"] }
+
+[profile.release]
+# panic = "abort"
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true

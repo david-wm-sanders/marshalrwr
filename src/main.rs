@@ -1,6 +1,5 @@
 use std::net::SocketAddr;
 
-// use tracing::debug;
 use tracing_subscriber::{layer::SubscriberExt,util::SubscriberInitExt};
 use axum::{response::Html, routing::get, Router};
 use tower_http::trace::TraceLayer;
@@ -30,6 +29,9 @@ async fn main() {
         .with_graceful_shutdown(gs_sig())
         .await
         .unwrap();
+    
+    // salute the fallen
+    tracing::debug!("o7");
 }
 
 async fn handler() -> Html<&'static str> {

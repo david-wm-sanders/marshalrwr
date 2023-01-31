@@ -5,7 +5,7 @@ use axum::{response::Html, routing::get, Router};
 use tower_http::trace::TraceLayer;
 
 mod app;
-use app::util::shutdown_signal;
+use app::signalling::shutdown_signal;
 
 #[tokio::main]
 async fn main() {

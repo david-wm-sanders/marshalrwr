@@ -1,8 +1,16 @@
 use std::net::SocketAddr;
 
 use tracing_subscriber::{layer::SubscriberExt,util::SubscriberInitExt};
-use axum::{response::Html, routing::get, Router};
+use axum::{Router, routing::{get, post},
+           http::{StatusCode, request::Parts},
+           extract::{Query, FromRequestParts,
+                     rejection::QueryRejection},
+           response::{Html, Response, IntoResponse}};
 use tower_http::trace::TraceLayer;
+use serde::{Deserialize, de::DeserializeOwned};
+use validator::Validate;
+use async_trait::async_trait;
+use thiserror::Error;
 
 mod app;
 use app::signalling::shutdown_signal;
@@ -41,6 +49,59 @@ async fn handler() -> Html<&'static str> {
     Html("<h1>Hello, World!</h1>")
 }
 
-async fn rwr1_get_profile_php_handler() -> Html<&'static str> {
-    Html("get_profile.php test")
+#[derive(Debug, Deserialize, Validate)]
+struct GetProfilePhpParameters {
+    hash: u32,
+    username: String,
+    #[validate(length(equal = 64))]
+    rid: String,
+    sid: u32,
+    realm: String,
+    #[validate(length(equal = 64))]
+    realm_digest: String
 }
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct ValidatedQuery<T>(pub T);
+
+#[async_trait]
+impl<T, S> FromRequestParts<S> for ValidatedQuery<T>
+where
+    T: DeserializeOwned + Validate,
+    S: Send + Sync,
+    Query<T>: FromRequestParts<S, Rejection = QueryRejection>
+{
+    type Rejection = ServerError;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let Query(params) = Query::<T>::from_request_parts(parts, state).await?;
+        params.validate()?;
+        Ok(ValidatedQuery(params))
+    }
+}
+
+#[derive(Debug, Error)]
+pub enum ServerError {
+    #[error(transparent)]
+    ValidationError(#[from] validator::ValidationErrors),
+    #[error(transparent)]
+    AxumQueryRejection(#[from] QueryRejection)
+}
+
+impl IntoResponse for ServerError {
+    fn into_response(self) -> Response {
+        match self {
+            ServerError::ValidationError(_) => {
+                let message = format!("Input validation error: [{}]", self).replace('\n', ", ");
+                (StatusCode::BAD_REQUEST, message)
+            }
+            ServerError::AxumQueryRejection(_) => (StatusCode::BAD_REQUEST, self.to_string()),
+        }
+        .into_response()
+    }
+}
+
+async fn rwr1_get_profile_php_handler(ValidatedQuery(params): ValidatedQuery<GetProfilePhpParameters>) -> Html<String> {
+    Html(format!("{:#?}", params))
+}
+

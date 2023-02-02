@@ -8,7 +8,7 @@ use axum::{Router, routing::{get, post},
            response::{Html, Response, IntoResponse}};
 use tower_http::trace::TraceLayer;
 use serde::{Deserialize, de::DeserializeOwned};
-use validator::Validate;
+use validator::{Validate, ValidateArgs};
 use async_trait::async_trait;
 use thiserror::Error;
 
@@ -28,7 +28,6 @@ async fn main() {
 
     // build our application with a route and add the tower-http tracing layer
     let application_router = Router::new()
-        .route("/", get(handler))
         .route("/get_profile.php", get(rwr1_get_profile_handler))
         .layer(TraceLayer::new_for_http());
 
@@ -45,9 +44,7 @@ async fn main() {
     tracing::debug!("o7");
 }
 
-async fn handler() -> Html<&'static str> {
-    Html("<h1>Hello, World!</h1>")
-}
+struct AppState {}
 
 #[derive(Debug, Deserialize, Validate)]
 struct GetProfileParams {
@@ -76,6 +73,7 @@ where
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let Query(params) = Query::<T>::from_request_parts(parts, state).await?;
         params.validate()?;
+        // params.validate_args()?;
         Ok(ValidatedQuery(params))
     }
 }

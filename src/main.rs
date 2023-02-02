@@ -1,16 +1,19 @@
 use std::net::SocketAddr;
+use std::sync::Arc;
 
 use tracing_subscriber::{layer::SubscriberExt,util::SubscriberInitExt};
 use axum::{Router, routing::{get, post},
            http::{StatusCode, request::Parts},
            extract::{Query, FromRequestParts,
-                     rejection::QueryRejection},
+                     rejection::QueryRejection,
+                     State, FromRef},
            response::{Html, Response, IntoResponse}};
 use tower_http::trace::TraceLayer;
 use serde::{Deserialize, de::DeserializeOwned};
 use validator::{Validate, ValidateArgs};
 use async_trait::async_trait;
 use thiserror::Error;
+use surrealdb::{Datastore, Session, Error, sql::Value};
 
 mod app;
 use app::signalling::shutdown_signal;
@@ -26,9 +29,13 @@ async fn main() {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
+    tracing::debug!("setting up application state");
+    let app_state = AppState::new("file://classified.db", "marshalrwr", "profiles").await.unwrap();
+
     // build our application with a route and add the tower-http tracing layer
     let application_router = Router::new()
         .route("/get_profile.php", get(rwr1_get_profile_handler))
+        .with_state(app_state)
         .layer(TraceLayer::new_for_http());
 
     // run it
@@ -44,7 +51,36 @@ async fn main() {
     tracing::debug!("o7");
 }
 
-struct AppState {}
+#[derive(Clone)]
+struct AppState {
+    pub db: DbState
+}
+
+impl std::fmt::Debug for AppState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "AppState {{ ds: {:#?} }}", self.db.session.db)
+    }
+}
+
+#[derive(Clone)]
+struct DbState {
+    pub datastore: Arc<Datastore>,
+    pub session: Session
+}
+
+impl AppState {
+    pub async fn new(datastore: &str, namespace: &str, database: &str) -> Result<Self, Error> {
+        let ds = Arc::new(Datastore::new(datastore).await?);
+        let sesh = Session::for_db(namespace, database);
+        Ok(Self { db: DbState { datastore: ds, session: sesh} } )
+    }
+}
+
+impl FromRef<AppState> for DbState {
+    fn from_ref(app_state: &AppState) -> DbState {
+        app_state.db.clone()
+    }
+}
 
 #[derive(Debug, Deserialize, Validate)]
 struct GetProfileParams {
@@ -99,7 +135,7 @@ impl IntoResponse for ServerError {
     }
 }
 
-async fn rwr1_get_profile_handler(ValidatedQuery(params): ValidatedQuery<GetProfileParams>) -> Html<String> {
-    Html(format!("{:#?}", params))
+async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQuery(params): ValidatedQuery<GetProfileParams>) -> Html<String> {
+    Html(format!("{:#?}\n{:#?}", params, state))
 }
 

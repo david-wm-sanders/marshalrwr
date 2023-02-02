@@ -29,7 +29,7 @@ async fn main() {
     // build our application with a route and add the tower-http tracing layer
     let application_router = Router::new()
         .route("/", get(handler))
-        .route("/get_profile.php", get(rwr1_get_profile_php_handler))
+        .route("/get_profile.php", get(rwr1_get_profile_handler))
         .layer(TraceLayer::new_for_http());
 
     // run it
@@ -50,7 +50,7 @@ async fn handler() -> Html<&'static str> {
 }
 
 #[derive(Debug, Deserialize, Validate)]
-struct GetProfilePhpParameters {
+struct GetProfileParams {
     hash: u32,
     username: String,
     #[validate(length(equal = 64))]
@@ -101,7 +101,7 @@ impl IntoResponse for ServerError {
     }
 }
 
-async fn rwr1_get_profile_php_handler(ValidatedQuery(params): ValidatedQuery<GetProfilePhpParameters>) -> Html<String> {
+async fn rwr1_get_profile_handler(ValidatedQuery(params): ValidatedQuery<GetProfileParams>) -> Html<String> {
     Html(format!("{:#?}", params))
 }
 

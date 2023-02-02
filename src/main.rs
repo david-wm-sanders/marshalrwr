@@ -58,7 +58,8 @@ struct AppState {
 
 impl std::fmt::Debug for AppState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "AppState {{ ds: {:#?} }}", self.db.session.db)
+        let db_name: &str = self.db.session.db.as_ref().unwrap();
+        write!(f, "AppState {{ ds: {:#?} }}", db_name)
     }
 }
 
@@ -109,7 +110,7 @@ where
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let Query(params) = Query::<T>::from_request_parts(parts, state).await?;
         params.validate()?;
-        // params.validate_args()?;
+        // params.validate_args(state)?;
         Ok(ValidatedQuery(params))
     }
 }
@@ -136,6 +137,7 @@ impl IntoResponse for ServerError {
 }
 
 async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQuery(params): ValidatedQuery<GetProfileParams>) -> Html<String> {
+    // params.validate_args(&state);
     Html(format!("{:#?}\n{:#?}", params, state))
 }
 

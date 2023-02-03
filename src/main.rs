@@ -10,7 +10,7 @@ use axum::{Router, routing::{get, post},
            response::{Html, Response, IntoResponse}};
 use tower_http::trace::TraceLayer;
 use serde::{Deserialize, de::DeserializeOwned};
-use validator::{Validate, ValidateArgs};
+use validator::{Validate, ValidateArgs, ValidationError};
 use async_trait::async_trait;
 use thiserror::Error;
 use surrealdb::{Datastore, Session, Error, sql::Value};
@@ -86,6 +86,7 @@ impl FromRef<AppState> for DbState {
 #[derive(Debug, Deserialize, Validate)]
 struct GetProfileParams {
     hash: u32,
+    // #[validate(custom(function="validate_username", arg="&'v_a mut AppState"))]
     username: String,
     #[validate(length(equal = 64))]
     rid: String,
@@ -114,6 +115,10 @@ where
         Ok(ValidatedQuery(params))
     }
 }
+
+// fn validate_username(value: &str, arg: &mut AppState) -> Result<(), ValidationError> {
+//     Err(ValidationError::new("bad name"))
+// }
 
 #[derive(Debug, Error)]
 pub enum ServerError {

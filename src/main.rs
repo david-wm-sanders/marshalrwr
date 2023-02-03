@@ -83,11 +83,29 @@ impl FromRef<AppState> for DbState {
     }
 }
 
+fn validate_username(username: &str) -> Result<(), ValidationError> {
+    if username.contains("  ") {
+        return Err(ValidationError::new("username contains multiple consecutive spaces"));
+    }
+    if username.starts_with(" ") {
+        return Err(ValidationError::new("username starts with a space"));
+    }
+    if username.ends_with(" ") {
+        return Err(ValidationError::new("username ends with a space"));
+    }
+    // todo: check against blocklist?
+    // todo: check for weird characters that aren't control but correspond to weird things in default rwr latin font
+    Ok(())
+}
+
 #[derive(Debug, Deserialize, Validate)]
 struct GetProfileParams {
     #[validate(range(min=1, max="u32::MAX"))]
     hash: u64,
     #[validate(length(min=1, max=32))]
+    #[validate(non_control_character)]
+    #[validate(custom(function="validate_username"))]
+    // #[validate(does_not_contain="  ")]
     username: String,
     #[validate(length(equal=64))]
     rid: String,

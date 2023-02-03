@@ -104,10 +104,6 @@ fn validate_username(username: &str) -> Result<(), ValidationError> {
     Ok(())
 }
 
-// fn validate_digest_is_hex(digest: &str) -> Result<(), ValidationError> {
-//     Ok(())
-// }
-
 #[derive(Debug, Deserialize, Validate)]
 struct GetProfileParams {
     #[validate(range(min=1, max="u32::MAX"))]
@@ -115,12 +111,10 @@ struct GetProfileParams {
     #[validate(length(min=1, max=32))]
     #[validate(non_control_character)]
     #[validate(custom(function="validate_username"))]
-    // #[validate(does_not_contain="  ")]
     username: String,
     #[validate(length(equal=64))]
     #[validate(does_not_contain=" ")]
     #[validate(regex="RE_HEX_STR")]
-    // #[validate(custom(function="validate_digest_is_hex"))]
     rid: String,
     #[validate(range(min=1, max="u32::MAX"))]
     sid: u64,
@@ -147,14 +141,9 @@ where
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let Query(params) = Query::<T>::from_request_parts(parts, state).await?;
         params.validate()?;
-        // params.validate_args(state)?;
         Ok(ValidatedQuery(params))
     }
 }
-
-// fn validate_username(value: &str, arg: &mut AppState) -> Result<(), ValidationError> {
-//     Err(ValidationError::new("bad name"))
-// }
 
 #[derive(Debug, Error)]
 pub enum ServerError {
@@ -178,7 +167,6 @@ impl IntoResponse for ServerError {
 }
 
 async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQuery(params): ValidatedQuery<GetProfileParams>) -> Html<String> {
-    // params.validate_args(&state);
     Html(format!("{params:#?}\n{state:#?}"))
 }
 

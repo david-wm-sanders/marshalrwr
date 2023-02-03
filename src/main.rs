@@ -85,14 +85,17 @@ impl FromRef<AppState> for DbState {
 
 #[derive(Debug, Deserialize, Validate)]
 struct GetProfileParams {
-    hash: u32,
-    // #[validate(custom(function="validate_username", arg="&'v_a mut AppState"))]
+    #[validate(range(min=1, max="u32::MAX"))]
+    hash: u64,
+    #[validate(length(min=1, max=32))]
     username: String,
-    #[validate(length(equal = 64))]
+    #[validate(length(equal=64))]
     rid: String,
-    sid: u32,
+    #[validate(range(min=1, max="u32::MAX"))]
+    sid: u64,
+    #[validate(length(min=1, max=32))]
     realm: String,
-    #[validate(length(equal = 64))]
+    #[validate(length(equal=64))]
     realm_digest: String
 }
 

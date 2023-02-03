@@ -59,7 +59,7 @@ struct AppState {
 impl std::fmt::Debug for AppState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let db_name: &str = self.db.session.db.as_ref().unwrap();
-        write!(f, "AppState {{ ds: {:#?} }}", db_name)
+        write!(f, "AppState {{ ds: {db_name:#?} }}")
     }
 }
 
@@ -87,10 +87,10 @@ fn validate_username(username: &str) -> Result<(), ValidationError> {
     if username.contains("  ") {
         return Err(ValidationError::new("username contains multiple consecutive spaces"));
     }
-    if username.starts_with(" ") {
+    if username.starts_with(' ') {
         return Err(ValidationError::new("username starts with a space"));
     }
-    if username.ends_with(" ") {
+    if username.ends_with(' ') {
         return Err(ValidationError::new("username ends with a space"));
     }
     // todo: check against blocklist?
@@ -153,7 +153,7 @@ impl IntoResponse for ServerError {
     fn into_response(self) -> Response {
         match self {
             ServerError::ValidationError(_) => {
-                let message = format!("Input validation error: [{}]", self).replace('\n', ", ");
+                let message = format!("Input validation error: [{self}]").replace('\n', ", ");
                 (StatusCode::BAD_REQUEST, message)
             }
             ServerError::AxumQueryRejection(_) => (StatusCode::BAD_REQUEST, self.to_string()),
@@ -164,6 +164,6 @@ impl IntoResponse for ServerError {
 
 async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQuery(params): ValidatedQuery<GetProfileParams>) -> Html<String> {
     // params.validate_args(&state);
-    Html(format!("{:#?}\n{:#?}", params, state))
+    Html(format!("{params:#?}\n{state:#?}"))
 }
 

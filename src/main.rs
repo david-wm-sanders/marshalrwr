@@ -1,24 +1,20 @@
 use std::net::SocketAddr;
-use std::sync::Arc;
 
 use tracing_subscriber::{layer::SubscriberExt,util::SubscriberInitExt};
 use axum::{Router, routing::{get, post},
-           http::{StatusCode, request::Parts},
-           extract::{Query, FromRequestParts,
-                     rejection::QueryRejection,
-                     State, FromRef},
-           response::{Html, Response, IntoResponse}};
+           extract::State,
+           response::Html};
 use tower_http::trace::TraceLayer;
-use serde::{Deserialize, de::DeserializeOwned};
-use validator::{Validate, ValidateArgs, ValidationError};
-use async_trait::async_trait;
-use thiserror::Error;
-use surrealdb::{Datastore, Session, Error, sql::Value};
+use serde::Deserialize;
+use validator::{Validate, ValidationError};
 use lazy_static::lazy_static;
 use regex::Regex;
+use surrealdb::{Datastore, Session, Error, sql::Value};
 
 mod app;
 use app::signalling::shutdown_signal;
+use app::state::AppState;
+use app::validated_query::ValidatedQuery;
 
 lazy_static! {
     static ref RE_HEX_STR: Regex = Regex::new(r"^([0-9A-Fa-f]{2})+$").unwrap();
@@ -57,38 +53,6 @@ async fn main() {
     tracing::debug!("o7");
 }
 
-#[derive(Clone)]
-struct AppState {
-    pub db: DbState
-}
-
-impl std::fmt::Debug for AppState {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let db_name: &str = self.db.session.db.as_ref().unwrap();
-        write!(f, "AppState {{ ds: {db_name:#?} }}")
-    }
-}
-
-#[derive(Clone)]
-struct DbState {
-    pub datastore: Arc<Datastore>,
-    pub session: Session
-}
-
-impl AppState {
-    pub async fn new(datastore: &str, namespace: &str, database: &str) -> Result<Self, Error> {
-        let ds = Arc::new(Datastore::new(datastore).await?);
-        let sesh = Session::for_db(namespace, database);
-        Ok(Self { db: DbState { datastore: ds, session: sesh} } )
-    }
-}
-
-impl FromRef<AppState> for DbState {
-    fn from_ref(app_state: &AppState) -> DbState {
-        app_state.db.clone()
-    }
-}
-
 fn validate_username(username: &str) -> Result<(), ValidationError> {
     if username.contains("  ") {
         return Err(ValidationError::new("username contains multiple consecutive spaces"));
@@ -113,7 +77,6 @@ struct GetProfileParams {
     #[validate(custom(function="validate_username"))]
     username: String,
     #[validate(length(equal=64))]
-    #[validate(does_not_contain=" ")]
     #[validate(regex="RE_HEX_STR")]
     rid: String,
     #[validate(range(min=1, max="u32::MAX"))]
@@ -121,52 +84,11 @@ struct GetProfileParams {
     #[validate(length(min=1, max=32))]
     realm: String,
     #[validate(length(equal=64))]
-    #[validate(does_not_contain=" ")]
     #[validate(regex="RE_HEX_STR")]
     realm_digest: String
 }
 
-#[derive(Debug, Clone, Copy, Default)]
-pub struct ValidatedQuery<T>(pub T);
-
-#[async_trait]
-impl<T, S> FromRequestParts<S> for ValidatedQuery<T>
-where
-    T: DeserializeOwned + Validate,
-    S: Send + Sync,
-    Query<T>: FromRequestParts<S, Rejection = QueryRejection>
-{
-    type Rejection = ServerError;
-
-    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        let Query(params) = Query::<T>::from_request_parts(parts, state).await?;
-        params.validate()?;
-        Ok(ValidatedQuery(params))
-    }
-}
-
-#[derive(Debug, Error)]
-pub enum ServerError {
-    #[error(transparent)]
-    ValidationError(#[from] validator::ValidationErrors),
-    #[error(transparent)]
-    AxumQueryRejection(#[from] QueryRejection)
-}
-
-impl IntoResponse for ServerError {
-    fn into_response(self) -> Response {
-        match self {
-            ServerError::ValidationError(_) => {
-                let message = format!("Input validation error: [{self}]").replace('\n', ", ");
-                (StatusCode::BAD_REQUEST, message)
-            }
-            ServerError::AxumQueryRejection(_) => (StatusCode::BAD_REQUEST, self.to_string()),
-        }
-        .into_response()
-    }
-}
-
 async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQuery(params): ValidatedQuery<GetProfileParams>) -> Html<String> {
-    Html(format!("{params:#?}\n{state:#?}"))
+    Html(format!("{params:#?} {state:#?}"))
 }
 

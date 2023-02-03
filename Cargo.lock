@@ -944,6 +944,8 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "axum",
+ "lazy_static",
+ "regex",
  "serde",
  "surrealdb",
  "thiserror",

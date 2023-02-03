@@ -14,9 +14,15 @@ use validator::{Validate, ValidateArgs, ValidationError};
 use async_trait::async_trait;
 use thiserror::Error;
 use surrealdb::{Datastore, Session, Error, sql::Value};
+use lazy_static::lazy_static;
+use regex::Regex;
 
 mod app;
 use app::signalling::shutdown_signal;
+
+lazy_static! {
+    static ref RE_HEX_STR: Regex = Regex::new(r"^([0-9A-Fa-f]{2})+$").unwrap();
+}
 
 #[tokio::main]
 async fn main() {
@@ -98,6 +104,10 @@ fn validate_username(username: &str) -> Result<(), ValidationError> {
     Ok(())
 }
 
+// fn validate_digest_is_hex(digest: &str) -> Result<(), ValidationError> {
+//     Ok(())
+// }
+
 #[derive(Debug, Deserialize, Validate)]
 struct GetProfileParams {
     #[validate(range(min=1, max="u32::MAX"))]
@@ -108,12 +118,17 @@ struct GetProfileParams {
     // #[validate(does_not_contain="  ")]
     username: String,
     #[validate(length(equal=64))]
+    #[validate(does_not_contain=" ")]
+    #[validate(regex="RE_HEX_STR")]
+    // #[validate(custom(function="validate_digest_is_hex"))]
     rid: String,
     #[validate(range(min=1, max="u32::MAX"))]
     sid: u64,
     #[validate(length(min=1, max=32))]
     realm: String,
     #[validate(length(equal=64))]
+    #[validate(does_not_contain=" ")]
+    #[validate(regex="RE_HEX_STR")]
     realm_digest: String
 }
 

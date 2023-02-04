@@ -7,19 +7,14 @@ use axum::{Router, routing::{get, post},
 use tower_http::trace::TraceLayer;
 use serde::Deserialize;
 use validator::{Validate, ValidationError};
-use lazy_static::lazy_static;
-use regex::Regex;
+
 use surrealdb::{Datastore, Session, Error, sql::Value};
 
 mod app;
 use app::signalling::shutdown_signal;
 use app::state::AppState;
 use app::validated_query::ValidatedQuery;
-use app::util::rwr1_hash_username;
-
-lazy_static! {
-    static ref RE_HEX_STR: Regex = Regex::new(r"^([0-9A-Fa-f]{2})+$").unwrap();
-}
+use app::util::{validate_username, validate_get_profile_params, RE_HEX_STR};
 
 #[tokio::main]
 async fn main() {
@@ -54,32 +49,9 @@ async fn main() {
     tracing::debug!("o7");
 }
 
-fn validate_username(username: &str) -> Result<(), ValidationError> {
-    if username.contains("  ") {
-        return Err(ValidationError::new("username contains multiple consecutive spaces"));
-    }
-    if username.starts_with(' ') {
-        return Err(ValidationError::new("username starts with a space"));
-    }
-    if username.ends_with(' ') {
-        return Err(ValidationError::new("username ends with a space"));
-    }
-    // todo: check against blocklist?
-    // todo: check for weird characters that aren't control but correspond to weird things in default rwr latin font
-    Ok(())
-}
-
-fn validate_get_profile_params(params: &GetProfileParams) -> Result<(), ValidationError> {
-    // calculate int hash from string username and confirm they match
-    if params.hash != rwr1_hash_username(params.username.as_str()) {
-        return Err(ValidationError::new("hash not for given username"));
-    }
-    Ok(())
-}
-
 #[derive(Debug, Deserialize, Validate)]
 #[validate(schema(function="validate_get_profile_params"))]
-struct GetProfileParams {
+pub struct GetProfileParams {
     #[validate(range(min=1, max="u32::MAX"))]
     hash: u64,
     #[validate(length(min=1, max=32))]

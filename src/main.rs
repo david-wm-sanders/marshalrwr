@@ -15,6 +15,7 @@ mod app;
 use app::signalling::shutdown_signal;
 use app::state::AppState;
 use app::validated_query::ValidatedQuery;
+use app::util::rwr1_hash_username;
 
 lazy_static! {
     static ref RE_HEX_STR: Regex = Regex::new(r"^([0-9A-Fa-f]{2})+$").unwrap();
@@ -69,32 +70,11 @@ fn validate_username(username: &str) -> Result<(), ValidationError> {
 }
 
 fn validate_get_profile_params(params: &GetProfileParams) -> Result<(), ValidationError> {
-    // todo: calculate int hash from string username and confirm they match
-    let hash = params.hash;
-    let username = params.username.as_str();
-    let calculated_hash = rwr1_hash_username(username);
+    // calculate int hash from string username and confirm they match
+    if params.hash != rwr1_hash_username(params.username.as_str()) {
+        return Err(ValidationError::new("hash not for given username"));
+    }
     Ok(())
-}
-
-// # by Xe-No
-// def get_file_hash(name):
-//     lst = [ord(x) for x in name]
-//     d1 = 0
-//     lst.reverse()
-//     for i, element in enumerate(lst):
-//         d1 += element * (33**i)
-//     d2 = 33**len(lst) * 5381
-//     return (d1+d2) % (2**32)
-
-// derived from a python implementation^ by Xe-No
-// this seems to overcomplicate things a bit, a search for "5381 hash" seems to indicate that this could be djb2 (http://www.cse.yorku.ca/~oz/hash.html)
-// maybe also now improved djb2.1(?) with XOR?!
-// guess i will have to try both xd
-fn rwr1_hash_username(username: &str) -> u32 {
-    // iterators op?
-    let h = 5381u64;
-    let rev_ords = username.chars().map(|c| c as u32).rev().collect::<Vec<u32>>();
-    0
 }
 
 #[derive(Debug, Deserialize, Validate)]

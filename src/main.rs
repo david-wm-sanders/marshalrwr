@@ -1,20 +1,15 @@
 use std::net::SocketAddr;
 
 use tracing_subscriber::{layer::SubscriberExt,util::SubscriberInitExt};
-use axum::{Router, routing::{get, post},
-           extract::State,
-           response::Html};
+use axum::{Router, routing::{get, post}};
 use tower_http::trace::TraceLayer;
-use serde::Deserialize;
-use validator::{Validate, ValidationError};
 
-use surrealdb::{Datastore, Session, Error, sql::Value};
+// use surrealdb::{Datastore, Session, Error, sql::Value};
 
 mod app;
 use app::signalling::shutdown_signal;
 use app::state::AppState;
-use app::validated_query::ValidatedQuery;
-use app::profile_server::validation::{validate_username, validate_get_profile_params, RE_HEX_STR};
+use app::profile_server::get::rwr1_get_profile_handler;
 
 #[tokio::main]
 async fn main() {
@@ -49,30 +44,5 @@ async fn main() {
     tracing::debug!("o7");
 }
 
-#[derive(Debug, Deserialize, Validate)]
-#[validate(schema(function="validate_get_profile_params"))]
-pub struct GetProfileParams {
-    #[validate(range(min=1, max="u32::MAX"))]
-    hash: u64,
-    #[validate(length(min=1, max=32))]
-    #[validate(non_control_character)]
-    #[validate(custom(function="validate_username"))]
-    username: String,
-    #[validate(length(equal=64))]
-    #[validate(regex(path="RE_HEX_STR", code="rid not hexadecimal"))]
-    rid: String,
-    #[validate(range(min=1, max="u32::MAX"))]
-    sid: u64,
-    #[validate(length(min=1, max=32))]
-    realm: String,
-    #[validate(length(equal=64))]
-    #[validate(regex(path="RE_HEX_STR", code="realm digest not hexadecimal"))]
-    realm_digest: String
-}
 
-async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQuery(params): ValidatedQuery<GetProfileParams>) -> Html<String> {
-    let s = format!("{params:#?} {state:#?}");
-    // todo: perform any additional validation that requires app state
-    Html(s)
-}
 

@@ -7,6 +7,7 @@ use surrealdb::{Datastore, Session, Error, sql::Value};
 
 use super::super::{state::AppState, validated_query::ValidatedQuery};
 use super::validation::{validate_get_profile_params, validate_username, RE_HEX_STR};
+use super::PROFILES_SESSION;
 
 
 #[derive(Debug, Deserialize, Validate)]
@@ -32,6 +33,7 @@ pub struct GetProfileParams {
 
 pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQuery(params): ValidatedQuery<GetProfileParams>) -> Html<String> {
     let s = format!("{params:#?} {state:#?}");
+    // let ds = state.db.datastore.clone();
     // todo: perform any additional validation that requires app state
     Html(s)
 }

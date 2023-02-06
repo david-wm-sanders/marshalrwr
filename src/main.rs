@@ -23,7 +23,7 @@ async fn main() {
         .init();
 
     tracing::debug!("setting up application state");
-    let app_state = AppState::new("file://classified.db", "marshalrwr", "profiles").await.unwrap();
+    let app_state = AppState::new("file://classified.db").await.unwrap();
 
     // build our application with a route and add the tower-http tracing layer
     let application_router = Router::new()

@@ -10,23 +10,25 @@ pub struct AppState {
 
 impl std::fmt::Debug for AppState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let ns: &str = self.db.session.ns.as_ref().unwrap();
-        let db_name: &str = self.db.session.db.as_ref().unwrap();
-        write!(f, "AppState {{ db: {ns}/{db_name} }}")
+        // let ns: &str = self.db.session.ns.as_ref().unwrap();
+        // let db_name: &str = self.db.session.db.as_ref().unwrap();
+        // write!(f, "AppState {{ db: {ns}/{db_name} }}");
+        write!(f, "AppState {{ ? }}")
     }
 }
 
 #[derive(Clone)]
 pub struct DbState {
     pub datastore: Arc<Datastore>,
-    pub session: Session
+    // pub session: Session
 }
 
 impl AppState {
-    pub async fn new(datastore: &str, namespace: &str, database: &str) -> Result<Self, Error> {
+    // pub async fn new(datastore: &str, namespace: &str, database: &str) -> Result<Self, Error> {
+    pub async fn new(datastore: &str) -> Result<Self, Error> {
         let ds = Arc::new(Datastore::new(datastore).await?);
-        let sesh = Session::for_db(namespace, database);
-        Ok(Self { db: DbState { datastore: ds, session: sesh} } )
+        // let sesh = Session::for_db(namespace, database);
+        Ok(Self { db: DbState { datastore: ds, /* session: sesh */} } )
     }
 }
 

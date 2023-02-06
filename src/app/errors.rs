@@ -9,7 +9,9 @@ pub enum ServerError {
     #[error(transparent)]
     ValidationError(#[from] ValidationErrors),
     #[error(transparent)]
-    AxumQueryRejection(#[from] QueryRejection)
+    AxumQueryRejection(#[from] QueryRejection),
+    #[error(transparent)]
+    SurrealDbError(#[from] surrealdb::Error)
 }
 
 impl IntoResponse for ServerError {
@@ -20,6 +22,7 @@ impl IntoResponse for ServerError {
                 (StatusCode::BAD_REQUEST, message)
             }
             ServerError::AxumQueryRejection(_) => (StatusCode::BAD_REQUEST, self.to_string()),
+            ServerError::SurrealDbError(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
         }
         .into_response()
     }

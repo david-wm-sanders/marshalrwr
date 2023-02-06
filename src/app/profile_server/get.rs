@@ -1,4 +1,5 @@
 use axum::{extract::State, response::Html};
+use axum_macros::debug_handler;
 
 use serde::Deserialize;
 use validator::Validate;
@@ -31,9 +32,31 @@ pub struct GetProfileParams {
     pub realm_digest: String
 }
 
+#[debug_handler]
 pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQuery(params): ValidatedQuery<GetProfileParams>) -> Html<String> {
     let s = format!("{params:#?} {state:#?}");
+    // get own ref to the surrealdb datastore
     // let ds = state.db.datastore.clone();
+    let db = state.db.clone();
+    let statement: &str = "SELECT * FROM realms WHERE realm_name = $realm_name;";
+    let mut vars: std::collections::BTreeMap<String, Value> = std::collections::BTreeMap::new();
+    vars.insert("realm_name".into(), params.realm.into());
+    let results = db.query(&PROFILES_SESSION, statement).await.unwrap();
+    // let responses = match ds.execute(statement, &PROFILES_SESSION, Some(vars), false).await {
+    //     Ok(vr) => vr,
+    //     Err(err) => {
+    //         tracing::error!("surrealdb error: {err}");
+    //         vec![]
+    //     }
+    // };
+    
     // todo: perform any additional validation that requires app state
     Html(s)
 }
+
+// let responses = self.datastore.execute(statement, session, None, false).await?;
+// let mut results = Vec::new();
+// for response in responses {
+//     results.push(response.result?.first());
+// }
+// Ok(results)

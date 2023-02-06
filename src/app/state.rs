@@ -1,7 +1,10 @@
+// use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use axum::extract::FromRef;
 use surrealdb::{Datastore, Session, Error, sql::Value};
+// can't use this as dbs is private f
+// use surrealdb::dbs::Variables;
 
 // use super::profile_server::PROFILES_SESSION;
 
@@ -27,6 +30,9 @@ impl std::fmt::Debug for AppState {
 pub struct DbState {
     pub datastore: Arc<Datastore>,
 }
+
+// why isn't Variables exported from surrealdb?
+// type Variables = Option<BTreeMap<String, surrealdb::sql::Value>>;
 
 impl DbState {
     pub async fn query(&self, session: &Session, statement: &str) -> Result<Vec<Value>, Error> {

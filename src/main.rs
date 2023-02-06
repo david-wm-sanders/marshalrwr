@@ -14,7 +14,7 @@ mod app;
 use app::signalling::shutdown_signal;
 use app::state::AppState;
 use app::validated_query::ValidatedQuery;
-use app::util::{validate_username, validate_get_profile_params, RE_HEX_STR};
+use app::profile_server::validation::{validate_username, validate_get_profile_params, RE_HEX_STR};
 
 #[tokio::main]
 async fn main() {

@@ -3,6 +3,7 @@ use axum::extract::rejection::QueryRejection;
 use axum::response::{IntoResponse, Response};
 use axum::http::StatusCode;
 use validator::ValidationErrors;
+use sea_orm::error::DbErr;
 
 #[derive(Debug, Error)]
 pub enum ServerError {
@@ -10,6 +11,8 @@ pub enum ServerError {
     ValidationError(#[from] ValidationErrors),
     #[error(transparent)]
     AxumQueryRejection(#[from] QueryRejection),
+    #[error(transparent)]
+    SeaOrmDbError(#[from] DbErr),
 }
 
 impl IntoResponse for ServerError {
@@ -20,6 +23,7 @@ impl IntoResponse for ServerError {
                 (StatusCode::BAD_REQUEST, message)
             }
             ServerError::AxumQueryRejection(_) => (StatusCode::BAD_REQUEST, self.to_string()),
+            ServerError::SeaOrmDbError(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
         }
         .into_response()
     }

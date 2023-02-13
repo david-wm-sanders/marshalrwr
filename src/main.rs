@@ -26,6 +26,7 @@ async fn main() -> anyhow::Result<()> {
 
     tracing::debug!("setting up application state");
     let db_connection = Database::connect(format!("{DB_DEFAULT_URL}?mode=rwc")).await?;
+    Migrator::up(&db_connection, None).await?;
     let app_state = AppState::new(db_connection);
 
     // build our application with a route and add the tower-http tracing layer

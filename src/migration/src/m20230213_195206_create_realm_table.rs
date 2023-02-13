@@ -1,49 +1,54 @@
 use sea_orm_migration::prelude::*;
-use async_trait::async_trait;
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
 
-#[async_trait]
+/// Learn more at https://docs.rs/sea-query#iden
+// #[derive(Iden)]
+// enum Post {
+//     Table,
+//     Id,
+//     Title,
+//     Text,
+// }
+
+/// Learn more at https://docs.rs/sea-query#iden
+#[derive(Iden)]
+enum Realm {
+    Table,
+    Id,
+    Name,
+    Digest,
+}
+
+#[async_trait::async_trait]
 impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-        // Replace the sample below with your own migration scripts
-        // todo!();
-
+        // create the realm table
         manager
             .create_table(
                 Table::create()
-                    .table(Post::Table)
+                    .table(Realm::Table)
                     .if_not_exists()
                     .col(
-                        ColumnDef::new(Post::Id)
+                        ColumnDef::new(Realm::Id)
                             .integer()
                             .not_null()
                             .auto_increment()
                             .primary_key(),
                     )
-                    .col(ColumnDef::new(Post::Title).string().not_null())
-                    .col(ColumnDef::new(Post::Text).string().not_null())
+                    .col(ColumnDef::new(Realm::Name).string_len(32).not_null())
+                    .col(ColumnDef::new(Realm::Digest).string_len(64).not_null())
                     .to_owned(),
             )
             .await
+            
+        // todo: create index and foreign key?!
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-        // Replace the sample below with your own migration scripts
-        // todo!();
-
         manager
-            .drop_table(Table::drop().table(Post::Table).to_owned())
+            .drop_table(Table::drop().table(Realm::Table).to_owned())
             .await
     }
-}
-
-/// Learn more at https://docs.rs/sea-query#iden
-#[derive(Iden)]
-enum Post {
-    Table,
-    Id,
-    Title,
-    Text,
 }

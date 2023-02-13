@@ -4,11 +4,11 @@ use axum_macros::debug_handler;
 use serde::Deserialize;
 use validator::Validate;
 
-use surrealdb::{Datastore, Session, Error, sql::Value};
+// use surrealdb::{Datastore, Session, Error, sql::Value};
 
 use super::super::{state::AppState, validated_query::ValidatedQuery};
 use super::validation::{validate_get_profile_params, validate_username, RE_HEX_STR};
-use super::PROFILES_SESSION;
+// use super::PROFILES_SESSION;
 
 
 #[derive(Debug, Deserialize, Validate)]
@@ -37,11 +37,13 @@ pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQu
     let s = format!("{params:#?} {state:#?}");
     // get own ref to the surrealdb datastore
     // let ds = state.db.datastore.clone();
-    let db = state.db.clone();
-    let statement: &str = "SELECT * FROM realms WHERE realm_name = $realm_name;";
-    let mut vars: std::collections::BTreeMap<String, Value> = std::collections::BTreeMap::new();
-    vars.insert("realm_name".into(), params.realm.into());
-    let results = db.query(&PROFILES_SESSION, statement).await.unwrap();
+    
+    // let db = state.db.clone();
+    // let statement: &str = "SELECT * FROM realms WHERE realm_name = $realm_name;";
+    // let mut vars: std::collections::BTreeMap<String, Value> = std::collections::BTreeMap::new();
+    // vars.insert("realm_name".into(), params.realm.into());
+    // let results = db.query(&PROFILES_SESSION, statement).await.unwrap();
+    
     // let responses = match ds.execute(statement, &PROFILES_SESSION, Some(vars), false).await {
     //     Ok(vr) => vr,
     //     Err(err) => {

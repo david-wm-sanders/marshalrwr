@@ -1,8 +1,10 @@
 use std::net::SocketAddr;
 
+use sea_orm::Database;
 use tracing_subscriber::{layer::SubscriberExt,util::SubscriberInitExt};
 use axum::{Router, routing::{get, post}};
 use tower_http::trace::TraceLayer;
+use anyhow;
 
 // use surrealdb::{Datastore, Session, Error, sql::Value};
 
@@ -10,9 +12,10 @@ mod app;
 use app::signalling::shutdown_signal;
 use app::state::AppState;
 use app::profile_server::get::rwr1_get_profile_handler;
+use app::DB_DEFAULT_URL;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> anyhow::Result<()> {
     // setup tracing subscriber first and foremost
     tracing_subscriber::registry()
         .with(
@@ -23,6 +26,7 @@ async fn main() {
         .init();
 
     tracing::debug!("setting up application state");
+    let db_connection = Database::connect(format!("{DB_DEFAULT_URL}?mode=rwc")).await?;
     let app_state = AppState::new("file://classified.db").await.unwrap();
 
     // build our application with a route and add the tower-http tracing layer
@@ -42,6 +46,7 @@ async fn main() {
     
     // salute the fallen
     tracing::debug!("o7");
+    Ok(())
 }
 
 

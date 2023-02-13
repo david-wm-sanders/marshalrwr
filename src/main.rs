@@ -4,9 +4,6 @@ use sea_orm::Database;
 use tracing_subscriber::{layer::SubscriberExt,util::SubscriberInitExt};
 use axum::{Router, routing::{get, post}};
 use tower_http::trace::TraceLayer;
-use anyhow;
-
-// use surrealdb::{Datastore, Session, Error, sql::Value};
 
 mod app;
 use app::signalling::shutdown_signal;
@@ -27,7 +24,7 @@ async fn main() -> anyhow::Result<()> {
 
     tracing::debug!("setting up application state");
     let db_connection = Database::connect(format!("{DB_DEFAULT_URL}?mode=rwc")).await?;
-    let app_state = AppState::new("file://classified.db").await.unwrap();
+    let app_state = AppState::new(db_connection);
 
     // build our application with a route and add the tower-http tracing layer
     let application_router = Router::new()

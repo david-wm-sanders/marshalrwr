@@ -24,6 +24,7 @@ sea-orm = { version = "0.11.0", features = ["sqlx-sqlite", "runtime-tokio-rustls
 anyhow = "1.0.69"
 
 migration = { path = "./src/migration" }
+entity = { path = "./src/entity" }
 
 [profile.release]
 # panic = "abort"

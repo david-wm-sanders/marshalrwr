@@ -4,15 +4,6 @@ use sea_orm_migration::prelude::*;
 pub struct Migration;
 
 /// Learn more at https://docs.rs/sea-query#iden
-// #[derive(Iden)]
-// enum Post {
-//     Table,
-//     Id,
-//     Title,
-//     Text,
-// }
-
-/// Learn more at https://docs.rs/sea-query#iden
 #[derive(Iden)]
 enum Realm {
     Table,
@@ -37,18 +28,27 @@ impl MigrationTrait for Migration {
                             .auto_increment()
                             .primary_key(),
                     )
-                    .col(ColumnDef::new(Realm::Name).string_len(32).not_null())
+                    .col(ColumnDef::new(Realm::Name).string_len(32).not_null().unique_key())
                     .col(ColumnDef::new(Realm::Digest).string_len(64).not_null())
                     .to_owned(),
             )
-            .await
+            .await?;
             
         // todo: create index and foreign key?!
+        manager.create_index(Index::create().name("idx_realm_name").table(Realm::Table).col(Realm::Name).to_owned()).await?;
+        
+        Ok(())
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        // drop the realm name index
+        manager.drop_index(Index::drop().name("idx_realm_name").table(Realm::Table).to_owned()).await?;
+        
+        // drop the realm table
         manager
             .drop_table(Table::drop().table(Realm::Table).to_owned())
-            .await
+            .await?;
+            
+        Ok(())
     }
 }

@@ -23,6 +23,8 @@ regex = "1.7.1"
 sea-orm = { version = "0.11.0", features = ["sqlx-sqlite", "runtime-tokio-rustls", "macros"] }
 anyhow = "1.0.69"
 
+migration = { path = "./src/migration" }
+
 [profile.release]
 # panic = "abort"
 opt-level = "s"

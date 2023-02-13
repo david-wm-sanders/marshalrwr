@@ -11,6 +11,8 @@ use app::state::AppState;
 use app::profile_server::get::rwr1_get_profile_handler;
 use app::DB_DEFAULT_URL;
 
+use migration::{Migrator, MigratorTrait};
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     // setup tracing subscriber first and foremost

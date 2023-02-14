@@ -1,7 +1,8 @@
 use axum::{extract::State, response::Html};
 use axum_macros::debug_handler;
 
-use sea_orm::{EntityTrait, QueryFilter, ColumnTrait};
+use sea_orm::DatabaseConnection;
+use sea_orm::{EntityTrait, QueryFilter, ColumnTrait, error::DbErr};
 use serde::Deserialize;
 use validator::Validate;
 
@@ -9,7 +10,7 @@ use crate::app::errors::ServerError;
 
 use super::super::{state::AppState, validated_query::ValidatedQuery};
 use super::validation::{validate_get_profile_params, validate_username, RE_HEX_STR};
-use entity::Realm;
+use entity::{Realm, RealmModel, RealmActiveModel, RealmColumn};
 
 #[derive(Debug, Deserialize, Validate)]
 #[validate(schema(function="validate_get_profile_params"))]
@@ -36,17 +37,16 @@ pub struct GetProfileParams {
 pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQuery(params): ValidatedQuery<GetProfileParams>) -> Result<Html<String>, ServerError> {
     let s = format!("{params:#?} {state:#?}");
 
-    let realm = Realm::find().filter(entity::realm::Column::Name.eq(&params.realm)).one(&state.db).await?;
-    match realm {
-        Some(r) => {
-            tracing::debug!("Found existing realm");
-            // todo:: check the model digest against params.digest
-        }
-        None => {
-            tracing::debug!("No realm '{}'", params.realm)
-            // todo:: make realm?
-        }
+    if let Some(realm) = get_realm(&state.db, &params.realm).await? {
+        tracing::debug!("Realm {:#?}", realm)
+    } else {
+        // todo: check if this realm is in state.config
+        // todo: make this realm
     }
     
     Ok(Html(s))
+}
+
+pub async fn get_realm(db_conn: &DatabaseConnection, realm_name: &str) -> Result<Option<RealmModel>, DbErr> {
+    Ok(Realm::find().filter(RealmColumn::Name.eq(realm_name)).one(db_conn).await?)
 }

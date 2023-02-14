@@ -6,7 +6,8 @@ use sea_orm::{EntityTrait, QueryFilter, ColumnTrait, error::DbErr};
 use serde::Deserialize;
 use validator::Validate;
 
-use crate::app::errors::ServerError;
+// use crate::app::errors::ServerError;
+use super::errors::ProfileServerError;
 
 use super::super::{state::AppState, validated_query::ValidatedQuery};
 use super::validation::{validate_get_profile_params, validate_username, RE_HEX_STR};
@@ -34,7 +35,7 @@ pub struct GetProfileParams {
 }
 
 #[debug_handler]
-pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQuery(params): ValidatedQuery<GetProfileParams>) -> Result<Html<String>, ServerError> {
+pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQuery(params): ValidatedQuery<GetProfileParams>) -> Result<Html<String>, ProfileServerError> {
     let s = format!("{params:#?} {state:#?}");
 
     if let Some(realm) = get_realm(&state.db, &params.realm).await? {

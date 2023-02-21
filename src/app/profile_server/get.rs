@@ -1,7 +1,7 @@
 use axum::{extract::State, response::Html};
 use axum_macros::debug_handler;
 
-use sea_orm::DatabaseConnection;
+use sea_orm::{DatabaseConnection, ActiveValue};
 use sea_orm::{EntityTrait, QueryFilter, ColumnTrait, error::DbErr};
 use serde::Deserialize;
 use validator::Validate;
@@ -49,9 +49,18 @@ pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQu
     // todo: re-evaluate - yuck, get from db every time?!, put a realm cache into state?
     if let Some(realm) = get_realm_from_db(&state.db, &params.realm).await? {
         tracing::debug!("Realm {:#?}", realm)
+        // todo: check the realm digest in constant time mit subtle crate
     } else {
-        tracing::debug!("Realm '{:#?}' not found in db, creating it...", &params.realm);
-        // todo: make this realm
+        tracing::debug!("Realm '{}' not found in db, creating it...", &params.realm);
+        // create new realm active model
+        let new_realm = RealmActiveModel {
+            name: ActiveValue::Set(params.realm.to_owned()),
+            digest: ActiveValue::Set(params.realm_digest.to_owned()),
+            ..Default::default()
+        };
+        // insert this new realm into the db
+        let res = Realm::insert(new_realm).exec(&state.db).await?;
+        tracing::debug!("Realm '{}' inserted into db with id:{}", &params.realm, res.last_insert_id)
     }
     
     let s = format!("{params:#?} {state:#?}");

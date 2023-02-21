@@ -41,7 +41,7 @@ async fn main() -> anyhow::Result<()> {
         
     tracing::info!("loading configuration");
     let app_config: AppConfiguration = Figment::from(Serialized::defaults(AppConfiguration::default()))
-                                                .merge(Toml::file("app_config.toml"))
+                                                .merge(Toml::file("marshalrwr.toml"))
                                                 .merge(Env::prefixed("MRWR_"))
                                                 .extract()?;
     tracing::debug!("{app_config:?}");

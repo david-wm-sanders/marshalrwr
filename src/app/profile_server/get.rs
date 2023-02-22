@@ -13,6 +13,7 @@ use super::errors::ProfileServerError;
 use super::super::{state::AppState, validated_query::ValidatedQuery};
 use super::validation::{validate_get_profile_params, validate_username, RE_HEX_STR};
 use entity::{Realm, RealmModel, RealmActiveModel, RealmColumn};
+use entity::{Player, PlayerModel, PlayerActiveModel, PlayerColumn};
 
 #[derive(Debug, Deserialize, Validate)]
 #[validate(schema(function="validate_get_profile_params"))]
@@ -73,6 +74,11 @@ pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQu
     }
     
     // todo: find player in db, if not exist make and send init profile xml
+    if let Some(p) = get_player_from_db(&state.db, params.hash).await? {
+        tracing::debug!("found player '{}' in db, verifying rid :eyes:", p.username);
+    } else {
+        tracing::info!("player '{}' not found in db, enlisting them...", &params.username);
+    }
 
     let s = format!("{params:#?} {state:#?}");
     Ok(Html(s))
@@ -82,7 +88,11 @@ pub async fn get_realm_from_db(db_conn: &DatabaseConnection, realm_name: &str) -
     Ok(Realm::find().filter(RealmColumn::Name.eq(realm_name)).one(db_conn).await?)
 }
 
-pub async fn get_player_from_db(db_conn: &DatabaseConnection, player_name: &str) -> Result<Option<()>, DbErr> {
+pub async fn get_player_from_db(db_conn: &DatabaseConnection, player_hash: u64) -> Result<Option<PlayerModel>, DbErr> {
+    Ok(Player::find().filter(PlayerColumn::Hash.eq(player_hash)).one(db_conn).await?)
+}
+
+pub async fn get_player_from_db_by_name(db_conn: &DatabaseConnection, username: &str) -> Result<Option<()>, DbErr> {
     Ok(None)
 }
 

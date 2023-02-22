@@ -72,12 +72,18 @@ pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQu
         tracing::info!("realm '{}' inserted into db with id:{}", &params.realm, insertion_result.last_insert_id)
     }
     
+    // todo: find player in db, if not exist make and send init profile xml
+
     let s = format!("{params:#?} {state:#?}");
     Ok(Html(s))
 }
 
 pub async fn get_realm_from_db(db_conn: &DatabaseConnection, realm_name: &str) -> Result<Option<RealmModel>, DbErr> {
     Ok(Realm::find().filter(RealmColumn::Name.eq(realm_name)).one(db_conn).await?)
+}
+
+pub async fn get_player_from_db(db_conn: &DatabaseConnection, player_name: &str) -> Result<Option<()>, DbErr> {
+    Ok(None)
 }
 
 pub async fn get_realm(state: State<AppState>, realm_name: &str) -> Option<RealmModel> {

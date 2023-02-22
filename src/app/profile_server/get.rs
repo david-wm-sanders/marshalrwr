@@ -51,12 +51,7 @@ pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQu
     // todo: re-evaluate - yuck, get from db every time?!, put a realm cache into state?
     if let Some(r) = get_realm_from_db(&state.db, &params.realm).await? {
         tracing::debug!("found realm '{}' in db, verifying digest :eyes:", r.name);
-        // check the realm digest in constant time mit subtle crate
-        // todo: validate that this actually works in constant time XD
-        let valid_digest_bytes = r.digest.as_bytes();
-        let digest_bytes = params.realm_digest.as_bytes();
-        let digest_ok: bool = digest_bytes.ct_eq(valid_digest_bytes).into();
-        if !digest_ok {
+        if !verify_digest(&r.digest, &params.realm_digest) {
             tracing::error!("realm digest verification failed!");
             return Err(ProfileServerError::RealmDigestIncorrect(String::from(&params.realm), String::from(&params.realm_digest)));
         }
@@ -82,6 +77,14 @@ pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQu
 
     let s = format!("{params:#?} {state:#?}");
     Ok(Html(s))
+}
+
+pub fn verify_digest(given_digest: &str, valid_digest: &str) -> bool {
+    // check the realm digest in constant time mit subtle crate
+    // todo: validate that this actually works in constant time XD
+    let given_digest_bytes = given_digest.as_bytes();
+    let valid_digest_bytes = valid_digest.as_bytes();
+    given_digest_bytes.ct_eq(valid_digest_bytes).into()
 }
 
 pub async fn get_realm_from_db(db_conn: &DatabaseConnection, realm_name: &str) -> Result<Option<RealmModel>, DbErr> {

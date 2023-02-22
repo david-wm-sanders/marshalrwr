@@ -5,6 +5,7 @@ use sea_orm::{DatabaseConnection, ActiveValue};
 use sea_orm::{EntityTrait, QueryFilter, ColumnTrait, error::DbErr};
 use serde::Deserialize;
 use validator::Validate;
+use subtle::ConstantTimeEq;
 
 // use crate::app::errors::ServerError;
 use super::errors::ProfileServerError;
@@ -47,11 +48,19 @@ pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQu
     
     // try to get the realm from the db
     // todo: re-evaluate - yuck, get from db every time?!, put a realm cache into state?
-    if let Some(realm) = get_realm_from_db(&state.db, &params.realm).await? {
-        tracing::debug!("Realm {:#?}", realm)
-        // todo: check the realm digest in constant time mit subtle crate
+    if let Some(r) = get_realm_from_db(&state.db, &params.realm).await? {
+        tracing::debug!("found realm '{}' in db, verifying digest :eyes:", r.name);
+        // check the realm digest in constant time mit subtle crate
+        // todo: validate that this actually works in constant time XD
+        let valid_digest_bytes = r.digest.as_bytes();
+        let digest_bytes = params.realm_digest.as_bytes();
+        let digest_ok: bool = digest_bytes.ct_eq(valid_digest_bytes).into();
+        if !digest_ok {
+            tracing::error!("realm digest verification failed!");
+            return Err(ProfileServerError::RealmDigestIncorrect(String::from(&params.realm), String::from(&params.realm_digest)));
+        }
     } else {
-        tracing::debug!("Realm '{}' not found in db, creating it...", &params.realm);
+        tracing::info!("realm '{}' not found in db, creating it...", &params.realm);
         // create new realm active model
         let new_realm = RealmActiveModel {
             name: ActiveValue::Set(params.realm.to_owned()),
@@ -59,8 +68,8 @@ pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQu
             ..Default::default()
         };
         // insert this new realm into the db
-        let res = Realm::insert(new_realm).exec(&state.db).await?;
-        tracing::debug!("Realm '{}' inserted into db with id:{}", &params.realm, res.last_insert_id)
+        let insertion_result = Realm::insert(new_realm).exec(&state.db).await?;
+        tracing::info!("realm '{}' inserted into db with id:{}", &params.realm, insertion_result.last_insert_id)
     }
     
     let s = format!("{params:#?} {state:#?}");

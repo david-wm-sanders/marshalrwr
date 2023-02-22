@@ -897,6 +897,7 @@ dependencies = [
  "regex",
  "sea-orm",
  "serde",
+ "subtle",
  "thiserror",
  "tokio",
  "tower-http",
@@ -1854,6 +1855,12 @@ dependencies = [
  "unicode-bidi",
  "unicode-normalization",
 ]
+
+[[package]]
+name = "subtle"
+version = "2.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6bdef32e8150c2a081110b42772ffe7d7c9032b606bc226c8260fd97e0976601"
 
 [[package]]
 name = "syn"

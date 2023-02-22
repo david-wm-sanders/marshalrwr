@@ -15,6 +15,8 @@ pub enum ProfileServerError {
     SeaOrmDbError(#[from] DbErr),
     #[error("realm '{0}' is not configured")]
     RealmNotConfigured(String),
+    #[error("realm '{0}' digest '{1}' incorrect")]
+    RealmDigestIncorrect(String, String),
 }
 
 impl IntoResponse for ProfileServerError {
@@ -27,6 +29,7 @@ impl IntoResponse for ProfileServerError {
             ProfileServerError::AxumQueryRejection(_) => (StatusCode::BAD_REQUEST, self.to_string()),
             ProfileServerError::SeaOrmDbError(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
             ProfileServerError::RealmNotConfigured(_) => (StatusCode::BAD_REQUEST, self.to_string()),
+            ProfileServerError::RealmDigestIncorrect(_, _) => (StatusCode::UNAUTHORIZED, self.to_string()),
         }
         .into_response()
     }

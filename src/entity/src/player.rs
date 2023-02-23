@@ -15,4 +15,13 @@ pub struct Model {
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {}
 
+impl Related<super::realm::Entity> for Entity {
+    fn to() -> RelationDef {
+        super::account::Relation::Realm.def()
+    }
+    fn via() -> Option<RelationDef> {
+        Some(super::account::Relation::Player.def().rev())
+    }
+}
+
 impl ActiveModelBehavior for ActiveModel {}

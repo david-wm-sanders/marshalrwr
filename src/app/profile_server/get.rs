@@ -67,6 +67,7 @@ pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQu
     // (Some<Player>, None<Account>) - player was created (by get) previously but no set, resend init
     // (Some<Player>, Some<Account>) - the player has some account for this realm, send it to them
     let opt_player = get_player_from_db(&state.db, params.hash).await?;
+    // let opt_account = get_account_from_db().await?;
 
     let s = format!("{params:#?} {state:#?}");
     Ok(Html(s))
@@ -128,8 +129,15 @@ pub async fn get_realm_from_db(db_conn: &DatabaseConnection, realm_name: &str) -
 
 pub async fn get_player_from_db(db_conn: &DatabaseConnection, player_hash: u64) -> Result<Option<PlayerModel>, DbErr> {
     Ok(Player::find().filter(PlayerColumn::Hash.eq(player_hash)).one(db_conn).await?)
+    // todo: errr, wtf - as the hash is the primary key, should just use Player::find_by_id instead!
+    // Ok(Player::find_by_id(player_hash).one(db_conn).await?)
+    // eh, why is player_hash in entity i32?
 }
 
 pub async fn get_player_from_db_by_name(db_conn: &DatabaseConnection, username: &str) -> Result<Option<()>, DbErr> {
     Ok(None)
 }
+
+// pub async fn get_account_from_db(db_conn: &DatabaseConnection, player_hash: u64, realm_id: u64) -> Result<Option<AccountModel>, DbErr> {
+//     // Ok(Account::find().filter(AccountColumn::Hash.eq(player_hash)).one(db_conn).await?)
+// }

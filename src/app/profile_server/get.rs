@@ -47,29 +47,13 @@ pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQu
         return Err(ProfileServerError::RealmNotConfigured(String::from(&params.realm)));
     }
     
-    // try to get the realm from the db
-    // todo: re-evaluate - yuck, get from db every time?!, put a realm cache into state?
-    // todo: double re-evaluate - need to use realm model outside of if-let oof
-    // if let Some(r) = get_realm_from_db(&state.db, &params.realm).await? {
-    //     tracing::debug!("found realm '{}' in db, verifying digest :eyes:", r.name);
-    //     if !digest_ok(&r.digest, &params.realm_digest) {
-    //         tracing::error!("realm digest verification failed!");
-    //         return Err(ProfileServerError::RealmDigestIncorrect(String::from(&params.realm), String::from(&params.realm_digest)));
-    //     }
-    // } else {
-    //     tracing::info!("realm '{}' not found in db, creating it...", &params.realm);
-    //     // create new realm active model
-    //     let new_realm = RealmActiveModel {
-    //         name: ActiveValue::Set(params.realm.to_owned()),
-    //         digest: ActiveValue::Set(params.realm_digest.to_owned()),
-    //         ..Default::default()
-    //     };
-    //     // insert this new realm into the db
-    //     let insertion_result = Realm::insert(new_realm).exec(&state.db).await?;
-    //     tracing::info!("realm '{}' inserted into db with id:{}", &params.realm, insertion_result.last_insert_id)
-    // }
-
+    // get the realm
     let realm = get_realm(&state, &params.realm, &params.realm_digest).await?;
+    // verify the realm digest
+    if !digest_ok(&params.realm_digest, &realm.digest) {
+        tracing::error!("digest provided for realm '{}' incorrect", &params.realm);
+        return Err(ProfileServerError::RealmDigestIncorrect(String::from(&params.realm), String::from(&params.realm_digest)));
+    }
     
     // todo: find player in db, if not exist make and send init profile xml
     // if let Some(p) = get_player_from_db(&state.db, params.hash).await? {
@@ -96,8 +80,7 @@ pub fn digest_ok(given_digest: &str, valid_digest: &str) -> bool {
     given_digest_bytes.ct_eq(valid_digest_bytes).into()
 }
 
-pub async fn get_realm(state: &AppState, realm_name: &str, realm_digest: &str) -> Result<Option<RealmModel>, ProfileServerError> {
-    // note: no verification of realm_digest done in this fn atm
+pub async fn get_realm(state: &AppState, realm_name: &str, realm_digest: &str) -> Result<RealmModel, ProfileServerError> {
     tracing::debug!("searching for realm '{realm_name}' in realm cache");
     let mut opt_realm: Option<RealmModel> = None;
     {
@@ -111,25 +94,18 @@ pub async fn get_realm(state: &AppState, realm_name: &str, realm_digest: &str) -
     // if some realm with this name can be found in the realm cache, return it
     if let Some(realm) = opt_realm {
         tracing::debug!("located realm '{realm_name}' [{}] in realm cache", realm.id);
-        // verify the realm digest
-        // if !digest_ok(realm_digest, &realm.digest) {
-        //     tracing::error!("realm digest verification failed!");
-        //     return Err(ProfileServerError::RealmDigestIncorrect(String::from(realm_name), String::from(realm_digest)));
-        // }
-        return Ok(Some(realm.clone()));
+        return Ok(realm.clone());
     } else {
         // if some realm with this name can be found in the db, add it to the cache and return it
-        // drop(cache_reader);
         tracing::debug!("realm '{realm_name}' not found in cache, querying db for realm");
         if let Some(realm) = get_realm_from_db(&state.db, realm_name).await? {
             tracing::debug!("located realm '{realm_name}' [{}] in db, caching it", realm.id);
             // insert the realm into the realm cache
-        
             let mut cache_writer = state.realm_cache.write().unwrap();
             // todo: perhaps should double-check here that realm wasn't added by other thread/task before this write lock acquired?
             cache_writer.insert(String::from(realm_name), realm.clone());
             drop(cache_writer);
-            return Ok(Some(realm));
+            return Ok(realm);
         } else {
             tracing::debug!("realm '{}' not found in db, creating it...", realm_name);
             // create new realm active model
@@ -141,9 +117,9 @@ pub async fn get_realm(state: &AppState, realm_name: &str, realm_digest: &str) -
             // insert this new realm into the db and return model
             let realm = new_realm.insert(&state.db).await?;
             tracing::debug!("created realm '{}' in db", realm_name);
-            return Ok(Some(realm))
+            return Ok(realm);
         }
-    };
+    }
 }
 
 pub async fn get_realm_from_db(db_conn: &DatabaseConnection, realm_name: &str) -> Result<Option<RealmModel>, DbErr> {

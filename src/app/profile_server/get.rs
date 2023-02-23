@@ -118,6 +118,7 @@ pub async fn get_realm(state: &AppState, realm_name: &str, realm_digest: &str) -
             // insert this new realm into the db and return model
             let realm = new_realm.insert(&state.db).await?;
             tracing::debug!("created realm '{}' in db", realm_name);
+            // todo: insert realm into cache here xd
             return Ok(realm);
         }
     }

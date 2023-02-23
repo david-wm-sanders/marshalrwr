@@ -3,16 +3,7 @@ use sea_orm_migration::prelude::*;
 #[derive(DeriveMigrationName)]
 pub struct Migration;
 
-/// Learn more at https://docs.rs/sea-query#iden
-#[derive(Iden)]
-enum Player {
-    Table,
-    // Id,
-    Hash,
-    Username,
-    Sid,
-    Rid
-}
+use super::Player;
 
 #[async_trait::async_trait]
 impl MigrationTrait for Migration {

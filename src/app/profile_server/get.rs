@@ -49,9 +49,10 @@ pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQu
     
     // try to get the realm from the db
     // todo: re-evaluate - yuck, get from db every time?!, put a realm cache into state?
+    // todo: double re-evaluate - need to use realm model outside of if-let oof
     if let Some(r) = get_realm_from_db(&state.db, &params.realm).await? {
         tracing::debug!("found realm '{}' in db, verifying digest :eyes:", r.name);
-        if !verify_digest(&r.digest, &params.realm_digest) {
+        if !digest_ok(&r.digest, &params.realm_digest) {
             tracing::error!("realm digest verification failed!");
             return Err(ProfileServerError::RealmDigestIncorrect(String::from(&params.realm), String::from(&params.realm_digest)));
         }
@@ -69,17 +70,23 @@ pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQu
     }
     
     // todo: find player in db, if not exist make and send init profile xml
-    if let Some(p) = get_player_from_db(&state.db, params.hash).await? {
-        tracing::debug!("found player '{}' in db, verifying rid :eyes:", p.username);
-    } else {
-        tracing::info!("player '{}' not found in db, enlisting them...", &params.username);
-    }
+    // if let Some(p) = get_player_from_db(&state.db, params.hash).await? {
+    //     tracing::debug!("found player '{}' in db, verifying rid :eyes:", p.username);
+    // } else {
+    //     tracing::info!("player '{}' not found in db, enlisting them...", &params.username);
+    // }
+
+    // get an optional player and optional account, then match on Some|None to flow to logic for:
+    // (None<Player>, None<Account>) - create player and then init profile for player in realm
+    // (Some<Player>, None<Account>) - player was created (by get) previously but no set, resend init
+    // (Some<Player>, Some<Account>) - the player has some account for this realm, send it to them
+    let opt_player = get_player_from_db(&state.db, params.hash).await?;
 
     let s = format!("{params:#?} {state:#?}");
     Ok(Html(s))
 }
 
-pub fn verify_digest(given_digest: &str, valid_digest: &str) -> bool {
+pub fn digest_ok(given_digest: &str, valid_digest: &str) -> bool {
     // check the realm digest in constant time mit subtle crate
     // todo: validate that this actually works in constant time XD
     let given_digest_bytes = given_digest.as_bytes();

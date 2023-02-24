@@ -3,7 +3,8 @@ use sea_orm::{EntityTrait, QueryFilter, ColumnTrait, error::DbErr};
 use subtle::ConstantTimeEq;
 
 use super::errors::ProfileServerError;
-use super::super::state::AppState;
+use super::params::GetProfileParams;
+use super::super::{state::AppState, validated_query::ValidatedQuery};
 use entity::{Realm, RealmModel, RealmActiveModel, RealmColumn};
 use entity::{Player, PlayerModel, PlayerActiveModel, PlayerColumn};
 use entity::{Account, AccountModel, AccountActiveModel, AccountColumn};
@@ -59,7 +60,7 @@ pub async fn get_realm(state: &AppState, realm_name: &str, realm_digest: &str) -
         return Ok(realm.clone());
     } else {
         // if some realm with this name can be found in the db, add it to the cache and return it
-        tracing::debug!("realm '{realm_name}' not found in cache, querying db for realm");
+        tracing::debug!("realm '{realm_name}' not found in cache, querying db");
         if let Some(realm) = get_realm_from_db(&state.db, realm_name).await? {
             tracing::debug!("located realm '{realm_name}' [{}] in db, caching it", realm.id);
             // insert the realm into the realm cache
@@ -79,13 +80,68 @@ pub async fn get_realm(state: &AppState, realm_name: &str, realm_digest: &str) -
             // insert this new realm into the db and return model
             let realm = new_realm.insert(&state.db).await?;
             tracing::debug!("created realm '{}' in db", realm_name);
-            // todo: insert realm into cache here xd
+            // insert the realm into the realm cache
+            let mut cache_writer = state.realm_cache.write().unwrap();
+            // todo: perhaps should double-check here that realm wasn't added by other thread/task before this write lock acquired?
+            cache_writer.insert(String::from(realm_name), realm.clone());
+            drop(cache_writer);
             return Ok(realm);
         }
     }
 }
 
-pub async fn get_player_from_db_by_name(db_conn: &DatabaseConnection, username: &str) -> Result<Option<()>, DbErr> {
-    todo!();
+// pub async fn get_player_from_db_by_name(db_conn: &DatabaseConnection, username: &str) -> Result<Option<()>, DbErr> {
+//     todo!();
+//     Ok(None)
+// }
+
+pub async fn get_player(state: &AppState, params: &GetProfileParams) -> Result<Option<PlayerModel>, ProfileServerError> {
+    tracing::debug!("searching for player '{}' in player cache", params.username);
+    let mut opt_player: Option<PlayerModel> = None;
+    {
+        // we enclose cache_reader operations inside a scope here to ensure that the compiler
+        // understands it won't persist across any await (and thus require Send, which it isn't)
+        let cache_reader = state.player_cache.read().unwrap();
+        if let Some(cached_model) = cache_reader.get(&params.hash) {
+            opt_player = Some(cached_model.clone())
+        }
+    }
+    // if some player with this hash can be found in the player cache, return it
+    if let Some(player) = opt_player {
+        tracing::debug!("located player '{}' in player cache", &params.username);
+        return Ok(Some(player.clone()));
+    } else {
+        tracing::debug!("player '{}' not found in cache, querying db", &params.username);
+    }
+    // else {
+    //     // if some realm with this name can be found in the db, add it to the cache and return it
+    //     tracing::debug!("realm '{realm_name}' not found in cache, querying db for realm");
+    //     if let Some(realm) = get_realm_from_db(&state.db, realm_name).await? {
+    //         tracing::debug!("located realm '{realm_name}' [{}] in db, caching it", realm.id);
+    //         // insert the realm into the realm cache
+    //         let mut cache_writer = state.realm_cache.write().unwrap();
+    //         // todo: perhaps should double-check here that realm wasn't added by other thread/task before this write lock acquired?
+    //         cache_writer.insert(String::from(realm_name), realm.clone());
+    //         drop(cache_writer);
+    //         return Ok(realm);
+    //     } else {
+    //         tracing::debug!("realm '{}' not found in db, creating it...", realm_name);
+    //         // create new realm active model
+    //         let new_realm = RealmActiveModel {
+    //             name: ActiveValue::Set(realm_name.to_owned()),
+    //             digest: ActiveValue::Set(realm_digest.to_owned()),
+    //             ..Default::default()
+    //         };
+    //         // insert this new realm into the db and return model
+    //         let realm = new_realm.insert(&state.db).await?;
+    //         tracing::debug!("created realm '{}' in db", realm_name);
+    //         // insert the realm into the realm cache
+    //         let mut cache_writer = state.realm_cache.write().unwrap();
+    //         // todo: perhaps should double-check here that realm wasn't added by other thread/task before this write lock acquired?
+    //         cache_writer.insert(String::from(realm_name), realm.clone());
+    //         drop(cache_writer);
+    //         return Ok(realm);
+    //     }
+    // }
     Ok(None)
 }

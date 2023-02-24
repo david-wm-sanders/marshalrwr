@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use sea_orm::DatabaseConnection;
 
-use entity::RealmModel;
+use entity::{RealmModel, PlayerModel};
 use crate::AppConfiguration;
 
 
@@ -12,12 +12,14 @@ pub struct AppState {
     pub config: AppConfiguration,
     pub db: DatabaseConnection,
     pub realm_cache: Arc<RwLock<HashMap<String, RealmModel>>>,
+    pub player_cache: Arc<RwLock<HashMap<i64, PlayerModel>>>,
 }
 
 impl AppState {
     pub fn new(app_config: AppConfiguration, db_conn: DatabaseConnection) -> Self {
         Self { config: app_config, db: db_conn,
-               realm_cache: Arc::new(RwLock::new(HashMap::new())) }
+               realm_cache: Arc::new(RwLock::new(HashMap::new())),
+               player_cache: Arc::new(RwLock::new(HashMap::new())) }
     }
 }
 

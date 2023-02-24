@@ -15,11 +15,6 @@ pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQu
     
     // get the realm
     let realm = get_realm(&state, &params.realm, &params.realm_digest).await?;
-    // verify the realm digest
-    if !digest_ok(&params.realm_digest, &realm.digest) {
-        tracing::error!("digest provided for realm '{}' incorrect", &params.realm);
-        return Err(ProfileServerError::RealmDigestIncorrect(String::from(&params.realm), String::from(&params.realm_digest)));
-    }
 
     // tracing::info!("checking db for player '{}' in '{}' realm", &params.username, &params.realm);
     // let opt_player = get_player_from_db(&state.db, params.hash).await?;

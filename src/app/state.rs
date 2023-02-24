@@ -1,5 +1,6 @@
 use std::sync::{Arc, RwLock};
 use std::collections::HashMap;
+use std::time::Duration;
 
 use sea_orm::DatabaseConnection;
 use moka::future::Cache;
@@ -19,12 +20,18 @@ impl Default for CacheManager {
         Self {
             realms: Cache::builder().name("realms")
                                          .max_capacity(32)
+                                         .time_to_live(Duration::from_secs(60*60))
+                                         .time_to_idle(Duration::from_secs(15*60))
                                          .build(),
             players: Cache::builder().name("players")
                                          .max_capacity(256)
+                                         .time_to_live(Duration::from_secs(30*60))
+                                         .time_to_idle(Duration::from_secs(15*60))
                                          .build(),
             accounts: Cache::builder().name("accounts")
                                          .max_capacity(256)
+                                         .time_to_live(Duration::from_secs(30*60))
+                                         .time_to_idle(Duration::from_secs(15*60))
                                          .build(),
         }    
     }

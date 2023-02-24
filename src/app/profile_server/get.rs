@@ -37,7 +37,7 @@ pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQu
     let opt_player = get_player(&state, &params).await?;
     match opt_player {
         None => {
-            tracing::info!("player '{}' doesn't have any papers, enlist them (pending checks)", &params.username);
+            tracing::info!("player '{}' doesn't have any papers, enlisting them (pending checks)", &params.username);
             // enlist player and get back player model
             let player = enlist_player(&state, &params).await?;
             // make an initialisation profile for the player

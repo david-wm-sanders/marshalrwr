@@ -51,7 +51,7 @@ impl MigrationTrait for Migration {
                 .table(Account::Table)
                 .if_not_exists()
                 .col(ColumnDef::new(Account::RealmId).integer().not_null())
-                .col(ColumnDef::new(Account::Hash).integer().not_null())
+                .col(ColumnDef::new(Account::Hash).big_integer().not_null())
                 .col(ColumnDef::new(Account::GameVersion).integer())
                 .col(ColumnDef::new(Account::SquadTag).string_len(3))
                 // note: add color if needed

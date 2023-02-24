@@ -13,7 +13,7 @@ impl MigrationTrait for Migration {
             Table::create()
                 .table(Player::Table)
                 .if_not_exists()
-                .col(ColumnDef::new(Player::Hash).integer().not_null().primary_key())
+                .col(ColumnDef::new(Player::Hash).big_integer().not_null().primary_key())
                 .col(ColumnDef::new(Player::Username).string_len(32).not_null().unique_key())
                 .col(ColumnDef::new(Player::Sid).integer().not_null().unique_key())
                 .col(ColumnDef::new(Player::Rid).string_len(64).not_null())

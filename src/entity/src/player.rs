@@ -6,7 +6,7 @@ use sea_orm::entity::prelude::*;
 #[sea_orm(table_name = "player")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
-    pub hash: i32,
+    pub hash: i64,
     pub username: String,
     pub sid: i32,
     pub rid: String,

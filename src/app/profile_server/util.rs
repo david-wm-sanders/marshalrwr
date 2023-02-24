@@ -15,10 +15,10 @@ use std::hash::Hasher;
 // a search for `"5381" "33" hash` indicated that this could be djb2 (http://www.cse.yorku.ca/~oz/hash.html)
 // a Djb2a hasher was thus devised (with inspiration from some crates that provide various versions of djb2 hash implementations)
 // in this implementation, even though the server is x64, we ensure to use u32 (as the rwr client is 32-bit)
-pub fn rwr1_hash_username(username: &str) -> u64 {
+pub fn rwr1_hash_username(username: &str) -> i64 {
     let mut djb2a_hasher = Djb2aHash32::default();
     djb2a_hasher.write(username.as_bytes());
-    djb2a_hasher.finish()
+    djb2a_hasher.finish() as i64
 }
 
 struct Djb2aHash32 {

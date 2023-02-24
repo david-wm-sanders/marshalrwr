@@ -8,7 +8,7 @@ pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub realm_id: i32,
     #[sea_orm(primary_key, auto_increment = false)]
-    pub hash: i32,
+    pub hash: i64,
     pub game_version: Option<i32>,
     pub squad_tag: Option<String>,
     #[sea_orm(column_type = "Double", nullable)]

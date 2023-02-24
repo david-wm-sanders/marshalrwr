@@ -14,12 +14,13 @@ use super::super::{state::AppState, validated_query::ValidatedQuery};
 use super::validation::{validate_get_profile_params, validate_username, RE_HEX_STR};
 use entity::{Realm, RealmModel, RealmActiveModel, RealmColumn};
 use entity::{Player, PlayerModel, PlayerActiveModel, PlayerColumn};
+use entity::{Account, AccountModel, AccountActiveModel, AccountColumn};
 
 #[derive(Debug, Deserialize, Validate)]
 #[validate(schema(function="validate_get_profile_params"))]
 pub struct GetProfileParams {
     #[validate(range(min=1, max="u32::MAX"))]
-    pub hash: u64,
+    pub hash: i64,
     #[validate(length(min=1, max=32))]
     #[validate(non_control_character)]
     #[validate(custom(function="validate_username"))]
@@ -128,17 +129,15 @@ pub async fn get_realm_from_db(db_conn: &DatabaseConnection, realm_name: &str) -
     Ok(Realm::find().filter(RealmColumn::Name.eq(realm_name)).one(db_conn).await?)
 }
 
-pub async fn get_player_from_db(db_conn: &DatabaseConnection, player_hash: u64) -> Result<Option<PlayerModel>, DbErr> {
-    Ok(Player::find().filter(PlayerColumn::Hash.eq(player_hash)).one(db_conn).await?)
-    // todo: errr, wtf - as the hash is the primary key, should just use Player::find_by_id instead!
-    // Ok(Player::find_by_id(player_hash).one(db_conn).await?)
-    // eh, why is player_hash in entity i32?
+pub async fn get_player_from_db(db_conn: &DatabaseConnection, player_hash: i64) -> Result<Option<PlayerModel>, DbErr> {
+    // get player by i64 hash id
+    Ok(Player::find_by_id(player_hash).one(db_conn).await?)
 }
 
 pub async fn get_player_from_db_by_name(db_conn: &DatabaseConnection, username: &str) -> Result<Option<()>, DbErr> {
     Ok(None)
 }
 
-// pub async fn get_account_from_db(db_conn: &DatabaseConnection, player_hash: u64, realm_id: u64) -> Result<Option<AccountModel>, DbErr> {
+// pub async fn get_account_from_db(db_conn: &DatabaseConnection, player_hash: i64, realm_id: u64) -> Result<Option<AccountModel>, DbErr> {
 //     // Ok(Account::find().filter(AccountColumn::Hash.eq(player_hash)).one(db_conn).await?)
 // }

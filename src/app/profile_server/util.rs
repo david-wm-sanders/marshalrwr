@@ -8,12 +8,38 @@ use entity::{Realm, RealmModel, RealmActiveModel, RealmColumn};
 use entity::{Player, PlayerModel, PlayerActiveModel, PlayerColumn};
 use entity::{Account, AccountModel, AccountActiveModel, AccountColumn};
 
+pub fn check_realm_is_configured(state: &AppState, realm: &str) -> Result<(), ProfileServerError> {
+    // check that this realm is in state.config, this acts as a guard whilst the realm digest algo remains a mystery
+    // as we cannot derive the digest from knowing the realm secret and pw, the server expects the realms to be named (e.g. ["INCURSION"]) in the config instead
+    // when the first request for a realm is received, it will be created in the db with the digest supplied in the first request
+    // this should be fine when the IP allowlist for the profile server endpoints is implemented
+    if !state.config.realms.iter().any(|realm_name| realm_name == realm) {
+        tracing::error!("realm '{}' not configured", realm);
+        return Err(ProfileServerError::RealmNotConfigured(String::from(realm)));
+    }
+    Ok(())
+}
+
 pub fn digest_ok(given_digest: &str, valid_digest: &str) -> bool {
     // check the realm digest in constant time mit subtle crate
     // todo: validate that this actually works in constant time XD
     let given_digest_bytes = given_digest.as_bytes();
     let valid_digest_bytes = valid_digest.as_bytes();
     given_digest_bytes.ct_eq(valid_digest_bytes).into()
+}
+
+pub async fn get_realm_from_db(db_conn: &DatabaseConnection, realm_name: &str) -> Result<Option<RealmModel>, DbErr> {
+    Ok(Realm::find().filter(RealmColumn::Name.eq(realm_name)).one(db_conn).await?)
+}
+
+pub async fn get_player_from_db(db_conn: &DatabaseConnection, player_hash: i64) -> Result<Option<PlayerModel>, DbErr> {
+    // get player by i64 hash id
+    Ok(Player::find_by_id(player_hash).one(db_conn).await?)
+}
+
+pub async fn get_account_from_db(db_conn: &DatabaseConnection, realm_id: i32, player_hash: i64) -> Result<Option<AccountModel>, DbErr> {
+    // get the account by (realm_id, player_hash)
+    Ok(Account::find_by_id((realm_id, player_hash)).one(db_conn).await?)
 }
 
 pub async fn get_realm(state: &AppState, realm_name: &str, realm_digest: &str) -> Result<RealmModel, ProfileServerError> {
@@ -59,21 +85,7 @@ pub async fn get_realm(state: &AppState, realm_name: &str, realm_digest: &str) -
     }
 }
 
-pub async fn get_realm_from_db(db_conn: &DatabaseConnection, realm_name: &str) -> Result<Option<RealmModel>, DbErr> {
-    Ok(Realm::find().filter(RealmColumn::Name.eq(realm_name)).one(db_conn).await?)
-}
-
-pub async fn get_player_from_db(db_conn: &DatabaseConnection, player_hash: i64) -> Result<Option<PlayerModel>, DbErr> {
-    // get player by i64 hash id
-    Ok(Player::find_by_id(player_hash).one(db_conn).await?)
-}
-
 pub async fn get_player_from_db_by_name(db_conn: &DatabaseConnection, username: &str) -> Result<Option<()>, DbErr> {
     todo!();
     Ok(None)
-}
-
-pub async fn get_account_from_db(db_conn: &DatabaseConnection, realm_id: i32, player_hash: i64) -> Result<Option<AccountModel>, DbErr> {
-    // get the account by (realm_id, player_hash)
-    Ok(Account::find_by_id((realm_id, player_hash)).one(db_conn).await?)
 }

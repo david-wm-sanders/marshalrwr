@@ -1,6 +1,7 @@
 pub mod errors;
 pub mod signalling;
 pub mod state;
+pub mod hasher;
 pub mod validated_query;
 pub mod profile_server;
 

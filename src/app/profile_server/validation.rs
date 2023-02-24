@@ -4,7 +4,7 @@ use regex::Regex;
 
 // use crate::GetProfileParams;
 use super::params::GetProfileParams;
-use super::util::rwr1_hash_username;
+use super::super::hasher::rwr1_hash_username;
 
 lazy_static! {
     pub static ref RE_HEX_STR: Regex = Regex::new(r"^([0-9A-Fa-f]{2})+$").unwrap();

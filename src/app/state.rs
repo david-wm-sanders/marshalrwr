@@ -2,10 +2,32 @@ use std::sync::{Arc, RwLock};
 use std::collections::HashMap;
 
 use sea_orm::DatabaseConnection;
+use moka::future::Cache;
 
-use entity::{RealmModel, PlayerModel};
+use entity::{RealmModel, PlayerModel, AccountModel};
 use crate::AppConfiguration;
 
+pub struct CacheManager {
+    pub realm_cache: Cache<String, RealmModel>,
+    pub player_cache: Cache<i64, PlayerModel>,
+    pub account_cache: Cache<(i32, i64), AccountModel>,
+}
+
+impl Default for CacheManager {
+    fn default() -> Self {
+        Self {
+            realm_cache: Cache::builder().name("realms")
+                                         .max_capacity(32)
+                                         .build(),
+            player_cache: Cache::builder().name("players")
+                                         .max_capacity(256)
+                                         .build(),
+            account_cache: Cache::builder().name("accounts")
+                                         .max_capacity(256)
+                                         .build(),
+        }    
+    }
+}
 
 #[derive(Clone)]
 pub struct AppState {

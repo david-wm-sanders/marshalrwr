@@ -3,7 +3,7 @@ use axum_macros::debug_handler;
 
 use super::errors::ProfileServerError;
 use super::super::{state::AppState, validated_query::ValidatedQuery};
-use super::util::{check_realm_is_configured, get_realm, get_player};
+use super::util::{check_realm_is_configured, get_realm, get_player, enlist_player};
 
 use super::params::GetProfileParams;
 
@@ -12,18 +12,11 @@ pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQu
     // check that the realm has been configured, see fn comments for more detail
     check_realm_is_configured(&state, &params.realm)?;
 
-    // get the realm
+    // get the realm, making it if it doesn't exist yet
+    tracing::info!("locating realm '{}'", &params.realm);
     let realm = get_realm(&state, &params.realm, &params.realm_digest).await?;
-    
-    // get the player
-    // let opt_player = get_player(&state, &params).await?;
 
-    // tracing::info!("checking db for player '{}' in '{}' realm", &params.username, &params.realm);
-    // let opt_player = get_player_from_db(&state.db, params.hash).await?;
-    // let opt_account = get_account_from_db(&state.db, realm.id, params.hash).await?;
     // match (opt_player, opt_account) {
-    // // requires unstable library feature? maybe gotta use "futures" crate instead for now
-    // // match future::join!(get_player_from_db(&state.db, params.hash), get_account_from_db(&state.db, realm.id, params.hash)).await? {
     //     (None, None) => {
     //         tracing::info!("player '{}' not found in db, enlisting them (pending checks)", &params.username);
     //         // todo: run complex validation on username here :D
@@ -38,12 +31,14 @@ pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQu
     //     (None, Some(_)) => unreachable!("no player but some account wtf")
     // }
 
-    tracing::info!("acquiring documentation for player '{}'", &params.username);
+    // find the player, if any
+    tracing::info!("finding enlistment papers for player '{}'", &params.username);
     let opt_player = get_player(&state, &params).await?;
     match opt_player {
         None => {
-            tracing::debug!("None player");
-            // todo: create player active model
+            tracing::info!("player '{}' doesn't have any papers, enlist them (pending checks)", &params.username);
+            // enlist player and get back player model
+            let player = enlist_player(&state, &params).await?;
             // todo: make player init profile magic
         },
         Some(player) => {

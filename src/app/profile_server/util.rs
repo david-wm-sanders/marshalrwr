@@ -120,7 +120,7 @@ pub async fn get_player(state: &AppState, params: &GetProfileParams) -> Result<O
     tracing::debug!("searching for player '{}' in player cache", params.username);
     match state.cache.players.get(&params.hash) {
         Some(player) => {
-            tracing::debug!("located player '{}' [{}] in player cache", params.username, params.hash);
+            tracing::debug!("found player '{}' [{}] in player cache", params.username, params.hash);
             // verify the player sid and rid (digest)
             verify_player_sid_and_rid(params.hash, &params.username,
                                       params.sid as i64, player.sid,
@@ -131,13 +131,13 @@ pub async fn get_player(state: &AppState, params: &GetProfileParams) -> Result<O
             tracing::debug!("player '{}' not found in cache, querying db", params.username);
             match get_player_from_db(&state.db, params.hash).await? {
                 Some(player) => {
-                    tracing::debug!("located player '{}' [{}] in db, caching it", params.username, player.hash);
+                    tracing::debug!("found player '{}' [{}] in db, caching it", params.username, player.hash);
                     // insert the model into the player cache
                     let arc_model = Arc::new(player.clone());
                     state.cache.players.insert(params.hash, arc_model.clone()).await;
                     // verify the player sid and rid (digest)
                     verify_player_sid_and_rid(params.hash, &params.username,
-                                              params.sid as i64, player.sid,
+                                              params.sid, player.sid,
                                               &params.rid, &player.rid)?;
                     return Ok(Some(arc_model));
                 },
@@ -146,24 +146,24 @@ pub async fn get_player(state: &AppState, params: &GetProfileParams) -> Result<O
                     return Ok(None);
                 }
             }
-
-            //     None => {
-            //         tracing::debug!("realm '{}' not found in db, creating it...", realm_name);
-            //         // create new realm active model
-            //         let new_realm = RealmActiveModel {
-            //             name: ActiveValue::Set(realm_name.to_owned()),
-            //             digest: ActiveValue::Set(realm_digest.to_owned()),
-            //             ..Default::default()
-            //         };
-            //         // insert this new realm into the db and return model
-            //         let realm = new_realm.insert(&state.db).await?;
-            //         tracing::debug!("created realm '{}' [{}] in db", realm_name, realm.id);
-            //         // insert the model into the realm cache
-            //         let arc_model = Arc::new(realm);
-            //         state.cache.realms.insert(String::from(realm_name), arc_model.clone()).await;
-            //         return Ok(arc_model);
-            //     }
-            // }
         }
     }
+}
+
+pub async fn enlist_player(state: &AppState, params: &GetProfileParams) -> Result<Arc<PlayerModel>, ProfileServerError> {
+    // todo: do any stateful validation of params now - e.g. check username against blocklist
+    tracing::debug!("creating papers for player '{}'", &params.username);
+    let new_player = PlayerActiveModel {
+        hash: ActiveValue::Set(params.hash),
+        username: ActiveValue::Set(params.username.to_owned()),
+        sid: ActiveValue::Set(params.sid),
+        rid: ActiveValue::Set(params.rid.to_owned())
+    };
+    // insert new player into db
+    let player = new_player.insert(&state.db).await?;
+    tracing::debug!("inserted papers for player '{}' into db", &params.username);
+    let arc_player = Arc::new(player);
+    state.cache.players.insert(params.hash, arc_player.clone()).await;
+    tracing::debug!("inserted papers for player '{}' into player cache", &params.username);
+    Ok(arc_player)
 }

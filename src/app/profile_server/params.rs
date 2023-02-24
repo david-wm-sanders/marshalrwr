@@ -16,7 +16,7 @@ pub struct GetProfileParams {
     #[validate(regex(path="RE_HEX_STR", code="rid not hexadecimal"))]
     pub rid: String,
     #[validate(range(min=1, max="u32::MAX"))]
-    pub sid: u64,
+    pub sid: i64,
     #[validate(length(min=1, max=32))]
     pub realm: String,
     #[validate(length(equal=64))]

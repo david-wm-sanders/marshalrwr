@@ -3,8 +3,7 @@ use axum_macros::debug_handler;
 
 use super::errors::ProfileServerError;
 use super::super::{state::AppState, validated_query::ValidatedQuery};
-use super::util::{check_realm_is_configured, digest_ok, get_realm, get_player,
-                  get_player_from_db, get_account_from_db};
+use super::util::{check_realm_is_configured, get_realm, get_player};
 
 use super::params::GetProfileParams;
 
@@ -12,9 +11,12 @@ use super::params::GetProfileParams;
 pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQuery(params): ValidatedQuery<GetProfileParams>) -> Result<Html<String>, ProfileServerError> {
     // check that the realm has been configured, see fn comments for more detail
     check_realm_is_configured(&state, &params.realm)?;
-    
+
     // get the realm
     let realm = get_realm(&state, &params.realm, &params.realm_digest).await?;
+    
+    // get the player
+    // let opt_player = get_player(&state, &params).await?;
 
     // tracing::info!("checking db for player '{}' in '{}' realm", &params.username, &params.realm);
     // let opt_player = get_player_from_db(&state.db, params.hash).await?;
@@ -38,15 +40,14 @@ pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQu
 
     tracing::info!("acquiring documentation for player '{}'", &params.username);
     let opt_player = get_player(&state, &params).await?;
-    tracing::debug!("{opt_player:#?}");
     match opt_player {
         None => {
             tracing::debug!("None player");
+            // todo: create player active model
             // todo: make player init profile magic
         },
         Some(player) => {
             tracing::debug!("Some player");
-            // todo: verify player rid and sid
             // we have a player, try to get_account
         }
     }

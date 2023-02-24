@@ -31,12 +31,26 @@ pub fn digest_ok(given_digest: &str, valid_digest: &str) -> bool {
     given_digest_bytes.ct_eq(valid_digest_bytes).into()
 }
 
-pub fn verify_digest(realm_name: &str, realm_digest: &str, valid_digest: &str) -> Result<(), ProfileServerError> {
+pub fn verify_realm_digest(realm_name: &str, realm_digest: &str, valid_digest: &str) -> Result<(), ProfileServerError> {
     if !digest_ok(realm_digest, valid_digest) {         
         tracing::error!("digest provided for realm '{}' incorrect", realm_name);
         return Err(ProfileServerError::RealmDigestIncorrect(
             String::from(realm_name),
             String::from(realm_digest)));
+    }
+    Ok(())
+}
+
+pub fn verify_player_sid_and_rid(hash: i64, username: &str,
+                                 sid: i64, expected_sid: i64,
+                                 rid: &str, valid_rid: &str) -> Result<(), ProfileServerError> {
+    if sid != expected_sid {
+        return Err(ProfileServerError::PlayerSidMismatch(hash, String::from(username), sid, expected_sid));
+    }
+
+    if !digest_ok(rid, valid_rid) {
+        tracing::error!("rid provided for player '{}' incorrect", username);
+        return Err(ProfileServerError::PlayerRidIncorrect(hash, String::from(username), sid, String::from(rid)));
     }
     Ok(())
 }
@@ -61,7 +75,7 @@ pub async fn get_realm(state: &AppState, realm_name: &str, realm_digest: &str) -
         Some(realm) => {
             tracing::debug!("located realm '{realm_name}' [{}] in realm cache", realm.id);
             // verify the realm digest
-            verify_digest(realm_name, realm_digest, &realm.digest)?;
+            verify_realm_digest(realm_name, realm_digest, &realm.digest)?;
             return Ok(realm);
         },
         None => {
@@ -73,7 +87,7 @@ pub async fn get_realm(state: &AppState, realm_name: &str, realm_digest: &str) -
                     let arc_model = Arc::new(realm.clone());
                     state.cache.realms.insert(String::from(realm_name), arc_model.clone()).await;
                     // verify the realm digest
-                    verify_digest(realm_name, realm_digest, &realm.digest)?;
+                    verify_realm_digest(realm_name, realm_digest, &realm.digest)?;
                     return Ok(arc_model);
                 },
                 None => {
@@ -102,54 +116,54 @@ pub async fn get_realm(state: &AppState, realm_name: &str, realm_digest: &str) -
 //     Ok(None)
 // }
 
-pub async fn get_player(state: &AppState, params: &GetProfileParams) -> Result<Option<PlayerModel>, ProfileServerError> {
-    // tracing::debug!("searching for player '{}' in player cache", params.username);
-    // let mut opt_player: Option<PlayerModel> = None;
-    // {
-    //     // we enclose cache_reader operations inside a scope here to ensure that the compiler
-    //     // understands it won't persist across any await (and thus require Send, which it isn't)
-    //     let cache_reader = state.player_cache.read().unwrap();
-    //     if let Some(cached_model) = cache_reader.get(&params.hash) {
-    //         opt_player = Some(cached_model.clone())
-    //     }
-    // }
-    // // if some player with this hash can be found in the player cache, return it
-    // if let Some(player) = opt_player {
-    //     tracing::debug!("located player '{}' in player cache", &params.username);
-    //     return Ok(Some(player.clone()));
-    // } else {
-    //     tracing::debug!("player '{}' not found in cache, querying db", &params.username);
-    // }
-    
-    // else {
-    //     // if some realm with this name can be found in the db, add it to the cache and return it
-    //     tracing::debug!("realm '{realm_name}' not found in cache, querying db for realm");
-    //     if let Some(realm) = get_realm_from_db(&state.db, realm_name).await? {
-    //         tracing::debug!("located realm '{realm_name}' [{}] in db, caching it", realm.id);
-    //         // insert the realm into the realm cache
-    //         let mut cache_writer = state.realm_cache.write().unwrap();
-    //         // todo: perhaps should double-check here that realm wasn't added by other thread/task before this write lock acquired?
-    //         cache_writer.insert(String::from(realm_name), realm.clone());
-    //         drop(cache_writer);
-    //         return Ok(realm);
-    //     } else {
-    //         tracing::debug!("realm '{}' not found in db, creating it...", realm_name);
-    //         // create new realm active model
-    //         let new_realm = RealmActiveModel {
-    //             name: ActiveValue::Set(realm_name.to_owned()),
-    //             digest: ActiveValue::Set(realm_digest.to_owned()),
-    //             ..Default::default()
-    //         };
-    //         // insert this new realm into the db and return model
-    //         let realm = new_realm.insert(&state.db).await?;
-    //         tracing::debug!("created realm '{}' in db", realm_name);
-    //         // insert the realm into the realm cache
-    //         let mut cache_writer = state.realm_cache.write().unwrap();
-    //         // todo: perhaps should double-check here that realm wasn't added by other thread/task before this write lock acquired?
-    //         cache_writer.insert(String::from(realm_name), realm.clone());
-    //         drop(cache_writer);
-    //         return Ok(realm);
-    //     }
-    // }
-    Ok(None)
+pub async fn get_player(state: &AppState, params: &GetProfileParams) -> Result<Option<Arc<PlayerModel>>, ProfileServerError> {
+    tracing::debug!("searching for player '{}' in player cache", params.username);
+    match state.cache.players.get(&params.hash) {
+        Some(player) => {
+            tracing::debug!("located player '{}' [{}] in player cache", params.username, params.hash);
+            // verify the player sid and rid (digest)
+            verify_player_sid_and_rid(params.hash, &params.username,
+                                      params.sid as i64, player.sid,
+                                      &params.rid, &player.rid)?;
+            return Ok(Some(player));
+        },
+        None => {
+            tracing::debug!("player '{}' not found in cache, querying db", params.username);
+            match get_player_from_db(&state.db, params.hash).await? {
+                Some(player) => {
+                    tracing::debug!("located player '{}' [{}] in db, caching it", params.username, player.hash);
+                    // insert the model into the player cache
+                    let arc_model = Arc::new(player.clone());
+                    state.cache.players.insert(params.hash, arc_model.clone()).await;
+                    // verify the player sid and rid (digest)
+                    verify_player_sid_and_rid(params.hash, &params.username,
+                                              params.sid as i64, player.sid,
+                                              &params.rid, &player.rid)?;
+                    return Ok(Some(arc_model));
+                },
+                None => {
+                    tracing::debug!("player '{}' not found in db", params.username);
+                    return Ok(None);
+                }
+            }
+
+            //     None => {
+            //         tracing::debug!("realm '{}' not found in db, creating it...", realm_name);
+            //         // create new realm active model
+            //         let new_realm = RealmActiveModel {
+            //             name: ActiveValue::Set(realm_name.to_owned()),
+            //             digest: ActiveValue::Set(realm_digest.to_owned()),
+            //             ..Default::default()
+            //         };
+            //         // insert this new realm into the db and return model
+            //         let realm = new_realm.insert(&state.db).await?;
+            //         tracing::debug!("created realm '{}' [{}] in db", realm_name, realm.id);
+            //         // insert the model into the realm cache
+            //         let arc_model = Arc::new(realm);
+            //         state.cache.realms.insert(String::from(realm_name), arc_model.clone()).await;
+            //         return Ok(arc_model);
+            //     }
+            // }
+        }
+    }
 }

@@ -4,6 +4,7 @@ use axum::response::{IntoResponse, Response};
 use axum::http::StatusCode;
 use validator::ValidationErrors;
 use sea_orm::error::DbErr;
+use quick_xml::Error as QXmlError;
 
 #[derive(Debug, Error)]
 pub enum ProfileServerError {
@@ -13,6 +14,8 @@ pub enum ProfileServerError {
     AxumQueryRejection(#[from] QueryRejection),
     #[error(transparent)]
     SeaOrmDbError(#[from] DbErr),
+    #[error(transparent)]
+    QuickXmlError(#[from] QXmlError),
     #[error("realm '{0}' is not configured")]
     RealmNotConfigured(String),
     #[error("realm '{0}' digest '{1}' incorrect")]
@@ -32,6 +35,7 @@ impl IntoResponse for ProfileServerError {
             }
             ProfileServerError::AxumQueryRejection(_) => (StatusCode::BAD_REQUEST, self.to_string()),
             ProfileServerError::SeaOrmDbError(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
+            ProfileServerError::QuickXmlError(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
             ProfileServerError::RealmNotConfigured(_) => (StatusCode::BAD_REQUEST, self.to_string()),
             ProfileServerError::RealmDigestIncorrect(_, _) => (StatusCode::UNAUTHORIZED, self.to_string()),
             ProfileServerError::PlayerSidMismatch(_, _, _, _) => (StatusCode::UNAUTHORIZED, self.to_string()),

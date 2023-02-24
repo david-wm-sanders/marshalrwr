@@ -1,8 +1,10 @@
 use std::sync::Arc;
+use std::io::Cursor;
 
 use sea_orm::{DatabaseConnection, ActiveValue, ActiveModelTrait};
 use sea_orm::{EntityTrait, QueryFilter, ColumnTrait, error::DbErr};
 use subtle::ConstantTimeEq;
+use quick_xml::{events::{Event, BytesStart, BytesEnd}, writer::Writer};
 
 use super::errors::ProfileServerError;
 use super::params::GetProfileParams;
@@ -53,6 +55,21 @@ pub fn verify_player_sid_and_rid(hash: i64, username: &str,
         return Err(ProfileServerError::PlayerRidIncorrect(hash, String::from(username), sid, String::from(rid)));
     }
     Ok(())
+}
+
+pub fn make_init_profile_xml(username: &str, rid: &str) -> Result<String, ProfileServerError> {
+    let mut init_xml_writer = Writer::new(Cursor::new(Vec::new()));
+    let mut data_element_start = BytesStart::new("data");
+    let data_element_end = BytesEnd::new("data");
+    data_element_start.push_attribute(("ok", "1"));
+    init_xml_writer.write_event(Event::Start(data_element_start))?;
+    let mut profile_element = BytesStart::new("profile");
+    profile_element.push_attribute(("username", username));
+    profile_element.push_attribute(("rid", rid));
+    init_xml_writer.write_event(Event::Empty(profile_element))?;
+    init_xml_writer.write_event(Event::End(data_element_end))?;
+    let result = String::from_utf8(init_xml_writer.into_inner().into_inner()).unwrap();
+    Ok(result)
 }
 
 pub async fn get_realm_from_db(db_conn: &DatabaseConnection, realm_name: &str) -> Result<Option<RealmModel>, DbErr> {

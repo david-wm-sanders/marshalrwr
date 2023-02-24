@@ -3,7 +3,8 @@ use axum_macros::debug_handler;
 
 use super::errors::ProfileServerError;
 use super::super::{state::AppState, validated_query::ValidatedQuery};
-use super::util::{check_realm_is_configured, get_realm, get_player, enlist_player};
+use super::util::{check_realm_is_configured, get_realm, get_player, enlist_player,
+                  make_init_profile_xml};
 
 use super::params::GetProfileParams;
 
@@ -39,7 +40,10 @@ pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQu
             tracing::info!("player '{}' doesn't have any papers, enlist them (pending checks)", &params.username);
             // enlist player and get back player model
             let player = enlist_player(&state, &params).await?;
-            // todo: make player init profile magic
+            // make an initialisation profile for the player
+            let init_profile_xml = make_init_profile_xml(&player.username, &player.rid)?;
+            tracing::debug!("{init_profile_xml}");
+            // todo: return Xml response
         },
         Some(player) => {
             tracing::debug!("Some player");

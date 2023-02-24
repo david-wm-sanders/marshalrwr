@@ -55,7 +55,7 @@ pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQu
         tracing::error!("digest provided for realm '{}' incorrect", &params.realm);
         return Err(ProfileServerError::RealmDigestIncorrect(String::from(&params.realm), String::from(&params.realm_digest)));
     }
-    
+
     // todo: find player in db, if not exist make and send init profile xml
     // if let Some(p) = get_player_from_db(&state.db, params.hash).await? {
     //     tracing::debug!("found player '{}' in db, verifying rid :eyes:", p.username);
@@ -63,12 +63,27 @@ pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQu
     //     tracing::info!("player '{}' not found in db, enlisting them...", &params.username);
     // }
 
+    tracing::info!("checking db for player '{}' in '{}' realm", &params.username, &params.realm);
     // get an optional player and optional account, then match on Some|None to flow to logic for:
     // (None<Player>, None<Account>) - create player and then init profile for player in realm
     // (Some<Player>, None<Account>) - player was created (by get) previously but no set, resend init
     // (Some<Player>, Some<Account>) - the player has some account for this realm, send it to them
     let opt_player = get_player_from_db(&state.db, params.hash).await?;
-    // let opt_account = get_account_from_db().await?;
+    let opt_account = get_account_from_db(&state.db, realm.id, params.hash).await?;
+    match (opt_player, opt_account) {
+        (None, None) => {
+            tracing::info!("player '{}' not found in db, enlisting them (pending checks)", &params.username);
+            // todo: run complex validation on username here :D
+            // todo: create player and then init profile for player in realm
+        },
+        (Some(player), None) => {
+            // todo: player was created (by get) previously but no set, resend init
+        },
+        (Some(player), Some(account)) => {
+            // todo: the player has some account for this realm, send it to them
+        }
+        (None, Some(_)) => unreachable!("no player but some account wtf")
+    }
 
     let s = format!("{params:#?} {state:#?}");
     Ok(Html(s))
@@ -138,6 +153,7 @@ pub async fn get_player_from_db_by_name(db_conn: &DatabaseConnection, username: 
     Ok(None)
 }
 
-// pub async fn get_account_from_db(db_conn: &DatabaseConnection, player_hash: i64, realm_id: u64) -> Result<Option<AccountModel>, DbErr> {
-//     // Ok(Account::find().filter(AccountColumn::Hash.eq(player_hash)).one(db_conn).await?)
-// }
+pub async fn get_account_from_db(db_conn: &DatabaseConnection, realm_id: i32, player_hash: i64) -> Result<Option<AccountModel>, DbErr> {
+    // get the account by (realm_id, player_hash)
+    Ok(Account::find_by_id((realm_id, player_hash)).one(db_conn).await?)
+}

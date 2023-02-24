@@ -1,21 +1,15 @@
 use axum::{extract::State, response::Html};
 use axum_macros::debug_handler;
 
-use sea_orm::{DatabaseConnection, ActiveValue, ActiveModelTrait};
-use sea_orm::{EntityTrait, QueryFilter, ColumnTrait, error::DbErr};
-
-// use crate::app::errors::ServerError;
 use super::errors::ProfileServerError;
 use super::super::{state::AppState, validated_query::ValidatedQuery};
 use super::util::{check_realm_is_configured, digest_ok, get_realm, get_player_from_db, get_account_from_db};
 
 use super::params::GetProfileParams;
 
-
-
 #[debug_handler]
 pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQuery(params): ValidatedQuery<GetProfileParams>) -> Result<Html<String>, ProfileServerError> {
-    // check that the realm has been configured, see func comments for more detail
+    // check that the realm has been configured, see fn comments for more detail
     check_realm_is_configured(&state, &params.realm)?;
     
     // get the realm
@@ -30,6 +24,8 @@ pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQu
     let opt_player = get_player_from_db(&state.db, params.hash).await?;
     let opt_account = get_account_from_db(&state.db, realm.id, params.hash).await?;
     match (opt_player, opt_account) {
+    // requires unstable library feature? maybe gotta use "futures" crate instead for now
+    // match future::join!(get_player_from_db(&state.db, params.hash), get_account_from_db(&state.db, realm.id, params.hash)).await? {
         (None, None) => {
             tracing::info!("player '{}' not found in db, enlisting them (pending checks)", &params.username);
             // todo: run complex validation on username here :D
@@ -47,4 +43,3 @@ pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQu
     let s = format!("{params:#?} {state:#?}");
     Ok(Html(s))
 }
-

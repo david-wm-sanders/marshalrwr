@@ -3,7 +3,7 @@ use validator::ValidationError;
 use regex::Regex;
 
 // use crate::GetProfileParams;
-use super::get::GetProfileParams;
+use super::params::GetProfileParams;
 use super::util::rwr1_hash_username;
 
 lazy_static! {

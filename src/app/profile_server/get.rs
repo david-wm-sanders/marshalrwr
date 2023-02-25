@@ -4,7 +4,8 @@ use axum::{extract::State, response::Html};
 use axum_macros::debug_handler;
 
 use super::errors::ProfileServerError;
-use super::super::{state::AppState, validated_query::ValidatedQuery};
+use super::validation::ValidatedQuery;
+use super::super::state::AppState;
 use super::util::{check_realm_is_configured, get_realm, get_player, enlist_player,
                   make_init_profile_xml};
 

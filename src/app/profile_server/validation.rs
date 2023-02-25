@@ -1,13 +1,38 @@
 use lazy_static::lazy_static;
 use validator::ValidationError;
 use regex::Regex;
+use async_trait::async_trait;
+use axum::extract::{Query, FromRequestParts, rejection::QueryRejection};
+use axum::http::request::Parts;
+use serde::de::DeserializeOwned;
+use validator::Validate;
 
 // use crate::GetProfileParams;
 use super::params::GetProfileParams;
 use super::super::hasher::rwr1_hash_username;
+use super::errors::ProfileServerError;
 
 lazy_static! {
     pub static ref RE_HEX_STR: Regex = Regex::new(r"^([0-9A-Fa-f]{2})+$").unwrap();
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct ValidatedQuery<T>(pub T);
+
+#[async_trait]
+impl<T, S> FromRequestParts<S> for ValidatedQuery<T>
+where
+    T: DeserializeOwned + Validate,
+    S: Send + Sync,
+    Query<T>: FromRequestParts<S, Rejection = QueryRejection>
+{
+    type Rejection = ProfileServerError;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let Query(params) = Query::<T>::from_request_parts(parts, state).await?;
+        params.validate()?;
+        Ok(ValidatedQuery(params))
+    }
 }
 
 pub fn validate_username(username: &str) -> Result<(), ValidationError> {

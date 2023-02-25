@@ -1,6 +1,6 @@
 use axum::http::{StatusCode, header};
 use axum::response::{Response, IntoResponse};
-use axum::{extract::State, response::Html};
+use axum::extract::State;
 use axum_macros::debug_handler;
 
 use super::errors::ProfileServerError;
@@ -43,6 +43,5 @@ pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQu
     }
 
     let s = format!("{params:#?} {state:#?}");
-    // Ok(Html(s))
     Ok((StatusCode::OK, [(header::CONTENT_TYPE, "text/plain")], s).into_response())
 }

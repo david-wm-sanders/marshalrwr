@@ -9,8 +9,6 @@ use sea_orm::error::DbErr;
 use quick_xml::Error as QXmlError;
 use quick_xml::{events::{Event, BytesStart}, writer::Writer, escape::escape};
 
-// use crate::app::errors;
-
 #[derive(Debug, Error)]
 pub enum ProfileServerError {
     #[error(transparent)]
@@ -32,7 +30,7 @@ pub enum ProfileServerError {
 }
 
 impl ProfileServerError {
-    pub fn as_xml(self) -> String {
+    pub fn as_xml(&self) -> String {
         let mut error_data_xml_writer = Writer::new(Cursor::new(Vec::new()));
         let mut data_element_start = BytesStart::new("data");
         // push ok="1" for all atm, todo: make more specific via RE of rwr_server to discover ok codes

@@ -7,7 +7,6 @@ use axum::http::request::Parts;
 use serde::de::DeserializeOwned;
 use validator::Validate;
 
-// use crate::GetProfileParams;
 use super::params::GetProfileParams;
 use super::super::hasher::rwr1_hash_username;
 use super::errors::ProfileServerError;
@@ -45,7 +44,6 @@ pub fn validate_username(username: &str) -> Result<(), ValidationError> {
     if username.ends_with(' ') {
         return Err(ValidationError::new("username ends with a space"));
     }
-    // todo: check against blocklist?
     // todo: check for weird characters that aren't control but correspond to weird things in default rwr latin font
     Ok(())
 }
@@ -55,7 +53,5 @@ pub fn validate_get_profile_params(params: &GetProfileParams) -> Result<(), Vali
     if params.hash != rwr1_hash_username(params.username.as_str()) {
         return Err(ValidationError::new("hash not for given username"));
     }
-    // todo: validate steam account associated with sid has license?!
-    // this would be better as a one-time check during account creation (as it would require costly call to Steam APIs)
     Ok(())
 }

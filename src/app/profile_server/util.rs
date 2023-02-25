@@ -8,7 +8,7 @@ use quick_xml::{events::{Event, BytesStart, BytesEnd}, writer::Writer, escape::{
 
 use super::errors::ProfileServerError;
 use super::params::GetProfileParams;
-use super::super::{state::AppState, validated_query::ValidatedQuery};
+use super::super::state::AppState;
 use entity::{Realm, RealmModel, RealmActiveModel, RealmColumn};
 use entity::{Player, PlayerModel, PlayerActiveModel, PlayerColumn};
 use entity::{Account, AccountModel, AccountActiveModel, AccountColumn};
@@ -74,17 +74,20 @@ pub fn make_init_profile_xml(username: &str, rid: &str) -> Result<String, Profil
 }
 
 pub async fn get_realm_from_db(db_conn: &DatabaseConnection, realm_name: &str) -> Result<Option<RealmModel>, DbErr> {
-    Ok(Realm::find().filter(RealmColumn::Name.eq(realm_name)).one(db_conn).await?)
+    let realm = Realm::find().filter(RealmColumn::Name.eq(realm_name)).one(db_conn).await?;
+    Ok(realm)
 }
 
 pub async fn get_player_from_db(db_conn: &DatabaseConnection, player_hash: i64) -> Result<Option<PlayerModel>, DbErr> {
     // get player by i64 hash id
-    Ok(Player::find_by_id(player_hash).one(db_conn).await?)
+    let player = Player::find_by_id(player_hash).one(db_conn).await?;
+    Ok(player)
 }
 
 pub async fn get_account_from_db(db_conn: &DatabaseConnection, realm_id: i32, player_hash: i64) -> Result<Option<AccountModel>, DbErr> {
     // get the account by (realm_id, player_hash)
-    Ok(Account::find_by_id((realm_id, player_hash)).one(db_conn).await?)
+    let account = Account::find_by_id((realm_id, player_hash)).one(db_conn).await?;
+    Ok(account)
 }
 
 pub async fn get_realm(state: &AppState, realm_name: &str, realm_digest: &str) -> Result<Arc<RealmModel>, ProfileServerError> {
@@ -94,7 +97,7 @@ pub async fn get_realm(state: &AppState, realm_name: &str, realm_digest: &str) -
             tracing::debug!("located realm '{realm_name}' [{}] in realm cache", realm.id);
             // verify the realm digest
             verify_realm_digest(realm_name, realm_digest, &realm.digest)?;
-            return Ok(realm);
+            Ok(realm)
         },
         None => {
             tracing::debug!("realm '{realm_name}' not found in cache, querying db");
@@ -106,7 +109,7 @@ pub async fn get_realm(state: &AppState, realm_name: &str, realm_digest: &str) -
                     state.cache.realms.insert(String::from(realm_name), arc_model.clone()).await;
                     // verify the realm digest
                     verify_realm_digest(realm_name, realm_digest, &realm.digest)?;
-                    return Ok(arc_model);
+                    Ok(arc_model)
                 },
                 None => {
                     tracing::debug!("realm '{}' not found in db, creating it...", realm_name);
@@ -122,7 +125,7 @@ pub async fn get_realm(state: &AppState, realm_name: &str, realm_digest: &str) -
                     // insert the model into the realm cache
                     let arc_model = Arc::new(realm);
                     state.cache.realms.insert(String::from(realm_name), arc_model.clone()).await;
-                    return Ok(arc_model);
+                    Ok(arc_model)
                 }
             }
         }
@@ -141,9 +144,9 @@ pub async fn get_player(state: &AppState, params: &GetProfileParams) -> Result<O
             tracing::debug!("found player '{}' [{}] in player cache", params.username, params.hash);
             // verify the player sid and rid (digest)
             verify_player_sid_and_rid(params.hash, &params.username,
-                                      params.sid as i64, player.sid,
+                                      params.sid, player.sid,
                                       &params.rid, &player.rid)?;
-            return Ok(Some(player));
+            Ok(Some(player))
         },
         None => {
             tracing::debug!("player '{}' not found in cache, querying db", params.username);
@@ -157,11 +160,11 @@ pub async fn get_player(state: &AppState, params: &GetProfileParams) -> Result<O
                     verify_player_sid_and_rid(params.hash, &params.username,
                                               params.sid, player.sid,
                                               &params.rid, &player.rid)?;
-                    return Ok(Some(arc_model));
+                    Ok(Some(arc_model))
                 },
                 None => {
                     tracing::debug!("player '{}' not found in db", params.username);
-                    return Ok(None);
+                    Ok(None)
                 }
             }
         }

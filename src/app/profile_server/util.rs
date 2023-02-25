@@ -4,7 +4,7 @@ use std::io::Cursor;
 use sea_orm::{DatabaseConnection, ActiveValue, ActiveModelTrait};
 use sea_orm::{EntityTrait, QueryFilter, ColumnTrait, error::DbErr};
 use subtle::ConstantTimeEq;
-use quick_xml::{events::{Event, BytesStart, BytesEnd}, writer::Writer};
+use quick_xml::{events::{Event, BytesStart, BytesEnd}, writer::Writer, escape::{escape, unescape}};
 
 use super::errors::ProfileServerError;
 use super::params::GetProfileParams;
@@ -64,7 +64,8 @@ pub fn make_init_profile_xml(username: &str, rid: &str) -> Result<String, Profil
     data_element_start.push_attribute(("ok", "1"));
     init_xml_writer.write_event(Event::Start(data_element_start))?;
     let mut profile_element = BytesStart::new("profile");
-    profile_element.push_attribute(("username", username));
+    // the username could contain characters like <, >, etc so must be escaped
+    profile_element.push_attribute(("username", escape(username).as_ref()));
     profile_element.push_attribute(("rid", rid));
     init_xml_writer.write_event(Event::Empty(profile_element))?;
     init_xml_writer.write_event(Event::End(data_element_end))?;

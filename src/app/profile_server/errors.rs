@@ -7,7 +7,7 @@ use axum::http::{StatusCode, header::{self}};
 use validator::ValidationErrors;
 use sea_orm::error::DbErr;
 use quick_xml::Error as QXmlError;
-use quick_xml::{events::{Event, BytesStart}, writer::Writer};
+use quick_xml::{events::{Event, BytesStart}, writer::Writer, escape::escape};
 
 // use crate::app::errors;
 
@@ -37,36 +37,25 @@ impl ProfileServerError {
         let mut data_element_start = BytesStart::new("data");
         // push ok="1" for all atm, todo: make more specific via RE of rwr_server to discover ok codes
         data_element_start.push_attribute(("ok", "0"));
-        match self {
-            ProfileServerError::ValidationError(err) => {
-                data_element_start.push_attribute(("issue", err.to_string().as_str()));
-            },
-            ProfileServerError::AxumQueryRejection(err) => {
-                data_element_start.push_attribute(("issue", err.to_string().as_str()));
-            },
-            ProfileServerError::SeaOrmDbError(err) => {
-                data_element_start.push_attribute(("issue", err.to_string().as_str()));
-            },
-            ProfileServerError::QuickXmlError(err) => {
-                data_element_start.push_attribute(("issue", err.to_string().as_str()));
-            },
-            ProfileServerError::RealmNotConfigured(realm_name) => {
-                data_element_start.push_attribute(("issue", format!("realm '{realm_name}' not configured").as_str()));
-            },
-            ProfileServerError::RealmDigestIncorrect(realm_name, realm_digest) => {
-                data_element_start.push_attribute(("issue", format!("realm '{realm_name}' digest '{realm_digest}' incorrect").as_str()));
-            },
-            ProfileServerError::PlayerSidMismatch(hash, username, given_sid, _expected_sid) => {
-                data_element_start.push_attribute(("issue", format!("player '{username}' [{hash}] sid '{given_sid}' does not match existing sid").as_str()));
-            },
-            ProfileServerError::PlayerRidIncorrect(hash, username, _sid, given_rid) => {
-                data_element_start.push_attribute(("issue", format!("player '{username}' [{hash}] rid '{given_rid}' incorrect").as_str()));
-            }
-        }
+        let issue = match self {
+            ProfileServerError::ValidationError(err) => err.to_string(),
+            ProfileServerError::AxumQueryRejection(err) => err.to_string(),
+            ProfileServerError::SeaOrmDbError(err) => err.to_string(),
+            ProfileServerError::QuickXmlError(err) => err.to_string(),
+            ProfileServerError::RealmNotConfigured(realm_name) =>
+                format!("realm '{realm_name}' not configured"),
+            ProfileServerError::RealmDigestIncorrect(realm_name, realm_digest) =>
+                format!("realm '{realm_name}' digest '{realm_digest}' incorrect"),
+            ProfileServerError::PlayerSidMismatch(hash, username, given_sid, _expected_sid) =>
+                format!("player '{username}' [{hash}] sid '{given_sid}' does not match existing sid"),
+            ProfileServerError::PlayerRidIncorrect(hash, username, _sid, given_rid) =>
+                format!("player '{username}' [{hash}] rid '{given_rid}' incorrect"),
+        };
+        // escape the issue :D
+        let escaped_issue = escape(&issue).to_string();
+        data_element_start.push_attribute(("issue", escaped_issue.as_str()));
         match error_data_xml_writer.write_event(Event::Empty(data_element_start)) {
-            Ok(_) => {
-                String::from_utf8(error_data_xml_writer.into_inner().into_inner()).unwrap()
-            },
+            Ok(_) => String::from_utf8(error_data_xml_writer.into_inner().into_inner()).unwrap(),
             Err(err) => {
                 tracing::error!("failed to write xml data event for ProfileServerError response: {}", err.to_string());
                 String::from("<data ok=\"0\"")

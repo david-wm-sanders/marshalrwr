@@ -70,16 +70,11 @@ pub struct AppState {
     pub config: AppConfiguration,
     pub db: DatabaseConnection,
     pub cache: CacheManager,
-    // pub realm_cache: Arc<RwLock<HashMap<String, RealmModel>>>,
-    // pub player_cache: Arc<RwLock<HashMap<i64, PlayerModel>>>,
 }
 
 impl AppState {
     pub fn new(app_config: AppConfiguration, db_conn: DatabaseConnection) -> Self {
-        Self { config: app_config, db: db_conn,
-               cache: CacheManager::default(),
-               /* realm_cache: Arc::new(RwLock::new(HashMap::new())),
-               player_cache: Arc::new(RwLock::new(HashMap::new())) */ }
+        Self { config: app_config, db: db_conn, cache: CacheManager::default() }
     }
 }
 

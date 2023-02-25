@@ -1,10 +1,15 @@
+use std::io::Cursor;
+
 use thiserror::Error;
 use axum::extract::rejection::QueryRejection;
 use axum::response::{IntoResponse, Response};
-use axum::http::StatusCode;
+use axum::http::{StatusCode, header::{self}};
 use validator::ValidationErrors;
 use sea_orm::error::DbErr;
 use quick_xml::Error as QXmlError;
+use quick_xml::{events::{Event, BytesStart}, writer::Writer};
+
+// use crate::app::errors;
 
 #[derive(Debug, Error)]
 pub enum ProfileServerError {
@@ -26,20 +31,64 @@ pub enum ProfileServerError {
     PlayerRidIncorrect(i64, String, i64, String),
 }
 
+impl ProfileServerError {
+    pub fn as_xml(self) -> String {
+        let mut error_data_xml_writer = Writer::new(Cursor::new(Vec::new()));
+        let mut data_element_start = BytesStart::new("data");
+        // push ok="1" for all atm, todo: make more specific via RE of rwr_server to discover ok codes
+        data_element_start.push_attribute(("ok", "0"));
+        match self {
+            ProfileServerError::ValidationError(err) => {
+                data_element_start.push_attribute(("issue", err.to_string().as_str()));
+            },
+            ProfileServerError::AxumQueryRejection(err) => {
+                data_element_start.push_attribute(("issue", err.to_string().as_str()));
+            },
+            ProfileServerError::SeaOrmDbError(err) => {
+                data_element_start.push_attribute(("issue", err.to_string().as_str()));
+            },
+            ProfileServerError::QuickXmlError(err) => {
+                data_element_start.push_attribute(("issue", err.to_string().as_str()));
+            },
+            ProfileServerError::RealmNotConfigured(realm_name) => {
+                data_element_start.push_attribute(("issue", format!("realm '{realm_name}' not configured").as_str()));
+            },
+            ProfileServerError::RealmDigestIncorrect(realm_name, realm_digest) => {
+                data_element_start.push_attribute(("issue", format!("realm '{realm_name}' digest '{realm_digest}' incorrect").as_str()));
+            },
+            ProfileServerError::PlayerSidMismatch(hash, username, given_sid, _expected_sid) => {
+                data_element_start.push_attribute(("issue", format!("player '{username}' [{hash}] sid '{given_sid}' does not match existing sid").as_str()));
+            },
+            ProfileServerError::PlayerRidIncorrect(hash, username, _sid, given_rid) => {
+                data_element_start.push_attribute(("issue", format!("player '{username}' [{hash}] rid '{given_rid}' incorrect").as_str()));
+            }
+        }
+        match error_data_xml_writer.write_event(Event::Empty(data_element_start)) {
+            Ok(_) => {
+                String::from_utf8(error_data_xml_writer.into_inner().into_inner()).unwrap()
+            },
+            Err(err) => {
+                tracing::error!("failed to write xml data event for ProfileServerError response: {}", err.to_string());
+                String::from("<data ok=\"0\"")
+            }
+        }
+    }   
+}
+
 impl IntoResponse for ProfileServerError {
     fn into_response(self) -> Response {
+        tracing::error!("{}", self.to_string());
+        // let headers  = [(header::CONTENT_TYPE, "application/xml")];
+        let headers  = [(header::CONTENT_TYPE, "text/xml")];
         match self {
-            ProfileServerError::ValidationError(_) => {
-                let message = format!("Input validation error: [{self}]").replace('\n', ", ");
-                (StatusCode::BAD_REQUEST, message)
-            }
-            ProfileServerError::AxumQueryRejection(_) => (StatusCode::BAD_REQUEST, self.to_string()),
-            ProfileServerError::SeaOrmDbError(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
-            ProfileServerError::QuickXmlError(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
-            ProfileServerError::RealmNotConfigured(_) => (StatusCode::BAD_REQUEST, self.to_string()),
-            ProfileServerError::RealmDigestIncorrect(_, _) => (StatusCode::UNAUTHORIZED, self.to_string()),
-            ProfileServerError::PlayerSidMismatch(_, _, _, _) => (StatusCode::UNAUTHORIZED, self.to_string()),
-            ProfileServerError::PlayerRidIncorrect(_, _, _, _) => (StatusCode::UNAUTHORIZED, self.to_string()),
+            ProfileServerError::ValidationError(_) => (StatusCode::BAD_REQUEST, headers, self.as_xml()),
+            ProfileServerError::AxumQueryRejection(_) => (StatusCode::BAD_REQUEST, headers, self.as_xml()),
+            ProfileServerError::SeaOrmDbError(_) => (StatusCode::INTERNAL_SERVER_ERROR, headers, self.as_xml()),
+            ProfileServerError::QuickXmlError(_) => (StatusCode::INTERNAL_SERVER_ERROR, headers, self.as_xml()),
+            ProfileServerError::RealmNotConfigured(_) => (StatusCode::BAD_REQUEST, headers, self.as_xml()),
+            ProfileServerError::RealmDigestIncorrect(_, _) => (StatusCode::UNAUTHORIZED, headers, self.as_xml()),
+            ProfileServerError::PlayerSidMismatch(_, _, _, _) => (StatusCode::UNAUTHORIZED, headers, self.as_xml()),
+            ProfileServerError::PlayerRidIncorrect(_, _, _, _) => (StatusCode::UNAUTHORIZED, headers, self.as_xml()),
         }
         .into_response()
     }

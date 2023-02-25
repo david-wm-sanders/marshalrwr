@@ -42,7 +42,7 @@ pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQu
             let player = enlist_player(&state, &params).await?;
             // make an initialisation profile for the player
             let init_profile_xml = make_init_profile_xml(&player.username, &player.rid)?;
-            tracing::debug!("{init_profile_xml}");
+            tracing::debug!("sending init profile: '{init_profile_xml}' to game server");
             // todo: return Xml response
         },
         Some(player) => {

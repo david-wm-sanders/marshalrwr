@@ -211,6 +211,8 @@ pub fn make_init_profile_xml(username: &str, rid: &str) -> Result<String, Profil
     profile_element.push_attribute(("rid", rid));
     init_xml_writer.write_event(Event::Empty(profile_element))?;
     init_xml_writer.write_event(Event::End(data_element_end))?;
-    let result = String::from_utf8(init_xml_writer.into_inner().into_inner()).unwrap();
+    let mut result = String::from_utf8(init_xml_writer.into_inner().into_inner()).unwrap();
+    // append a newline to the end of the XML otherwise the rwr game server XML parser won't be happy :D
+    result.push_str("\n");
     Ok(result)
 }

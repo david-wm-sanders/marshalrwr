@@ -57,37 +57,9 @@ pub fn verify_player_sid_and_rid(hash: i64, username: &str,
     Ok(())
 }
 
-pub fn make_init_profile_xml(username: &str, rid: &str) -> Result<String, ProfileServerError> {
-    let mut init_xml_writer = Writer::new(Cursor::new(Vec::new()));
-    let mut data_element_start = BytesStart::new("data");
-    let data_element_end = BytesEnd::new("data");
-    data_element_start.push_attribute(("ok", "1"));
-    init_xml_writer.write_event(Event::Start(data_element_start))?;
-    let mut profile_element = BytesStart::new("profile");
-    // the username could contain characters like <, >, etc so must be escaped
-    profile_element.push_attribute(("username", escape(username).as_ref()));
-    profile_element.push_attribute(("rid", rid));
-    init_xml_writer.write_event(Event::Empty(profile_element))?;
-    init_xml_writer.write_event(Event::End(data_element_end))?;
-    let result = String::from_utf8(init_xml_writer.into_inner().into_inner()).unwrap();
-    Ok(result)
-}
-
 pub async fn get_realm_from_db(db_conn: &DatabaseConnection, realm_name: &str) -> Result<Option<RealmModel>, DbErr> {
     let realm = Realm::find().filter(RealmColumn::Name.eq(realm_name)).one(db_conn).await?;
     Ok(realm)
-}
-
-pub async fn get_player_from_db(db_conn: &DatabaseConnection, player_hash: i64) -> Result<Option<PlayerModel>, DbErr> {
-    // get player by i64 hash id
-    let player = Player::find_by_id(player_hash).one(db_conn).await?;
-    Ok(player)
-}
-
-pub async fn get_account_from_db(db_conn: &DatabaseConnection, realm_id: i32, player_hash: i64) -> Result<Option<AccountModel>, DbErr> {
-    // get the account by (realm_id, player_hash)
-    let account = Account::find_by_id((realm_id, player_hash)).one(db_conn).await?;
-    Ok(account)
 }
 
 pub async fn get_realm(state: &AppState, realm_name: &str, realm_digest: &str) -> Result<Arc<RealmModel>, ProfileServerError> {
@@ -137,6 +109,12 @@ pub async fn get_realm(state: &AppState, realm_name: &str, realm_digest: &str) -
 //     Ok(None)
 // }
 
+pub async fn get_player_from_db(db_conn: &DatabaseConnection, player_hash: i64) -> Result<Option<PlayerModel>, DbErr> {
+    // get player by i64 hash id
+    let player = Player::find_by_id(player_hash).one(db_conn).await?;
+    Ok(player)
+}
+
 pub async fn get_player(state: &AppState, params: &GetProfileParams) -> Result<Option<Arc<PlayerModel>>, ProfileServerError> {
     tracing::debug!("searching for player '{}' in player cache", params.username);
     match state.cache.players.get(&params.hash) {
@@ -171,6 +149,12 @@ pub async fn get_player(state: &AppState, params: &GetProfileParams) -> Result<O
     }
 }
 
+pub async fn get_account_from_db(db_conn: &DatabaseConnection, realm_id: i32, player_hash: i64) -> Result<Option<AccountModel>, DbErr> {
+    // get the account by (realm_id, player_hash)
+    let account = Account::find_by_id((realm_id, player_hash)).one(db_conn).await?;
+    Ok(account)
+}
+
 pub async fn enlist_player(state: &AppState, params: &GetProfileParams) -> Result<Arc<PlayerModel>, ProfileServerError> {
     // todo: do any stateful validation of params now - e.g. check username against blocklist
     tracing::debug!("creating papers for player '{}'", &params.username);
@@ -187,4 +171,20 @@ pub async fn enlist_player(state: &AppState, params: &GetProfileParams) -> Resul
     state.cache.players.insert(params.hash, arc_player.clone()).await;
     tracing::debug!("inserted papers for player '{}' into player cache", &params.username);
     Ok(arc_player)
+}
+
+pub fn make_init_profile_xml(username: &str, rid: &str) -> Result<String, ProfileServerError> {
+    let mut init_xml_writer = Writer::new(Cursor::new(Vec::new()));
+    let mut data_element_start = BytesStart::new("data");
+    let data_element_end = BytesEnd::new("data");
+    data_element_start.push_attribute(("ok", "1"));
+    init_xml_writer.write_event(Event::Start(data_element_start))?;
+    let mut profile_element = BytesStart::new("profile");
+    // the username could contain characters like <, >, etc so must be escaped
+    profile_element.push_attribute(("username", escape(username).as_ref()));
+    profile_element.push_attribute(("rid", rid));
+    init_xml_writer.write_event(Event::Empty(profile_element))?;
+    init_xml_writer.write_event(Event::End(data_element_end))?;
+    let result = String::from_utf8(init_xml_writer.into_inner().into_inner()).unwrap();
+    Ok(result)
 }

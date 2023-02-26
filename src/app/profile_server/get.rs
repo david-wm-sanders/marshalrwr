@@ -25,7 +25,8 @@ pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQu
 
     // find the player, if any
     tracing::info!("finding enlistment papers for player '{}'", &params.username);
-    let opt_player = get_player(&state, &params).await?;
+    let opt_player = get_player(&state, params.hash, &params.username,
+                                                    params.sid, &params.rid).await?;
     match opt_player {
         None => {
             tracing::info!("player '{}' doesn't have any papers, enlisting them (pending checks)", &params.username);
@@ -45,7 +46,7 @@ pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQu
                 None => {
                     // this is the edge-case, a game server can make multiple get_profile requests for a player
                     // before making the first set_profile that inserts/updates a player's account
-                    tracing::debug!("player '{}' isn't deployed in realm '{}' yet, spooling the dropship...", player.username, realm.name);
+                    tracing::debug!("player '{}' isn't deployed in realm '{}' yet, spooling up the dropship...", player.username, realm.name);
                     // resend another init profile here :D
                     let init_profile_xml = make_init_profile_xml(&player.username, &player.rid)?;
                     tracing::debug!("sending init profile for '{}' in '{}' to game server", &player.username, &realm.name);

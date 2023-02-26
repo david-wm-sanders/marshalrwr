@@ -115,33 +115,36 @@ pub async fn get_player_from_db(db_conn: &DatabaseConnection, player_hash: i64) 
     Ok(player)
 }
 
-pub async fn get_player(state: &AppState, params: &GetProfileParams) -> Result<Option<Arc<PlayerModel>>, ProfileServerError> {
-    tracing::debug!("searching for player '{}' in player cache", params.username);
-    match state.cache.players.get(&params.hash) {
+pub async fn get_player(state: &AppState,
+                        player_hash: i64, username: &str,
+                        sid: i64, rid: &str
+                        ) -> Result<Option<Arc<PlayerModel>>, ProfileServerError> {
+    tracing::debug!("searching for player '{}' [{}] in player cache", username, player_hash);
+    match state.cache.players.get(&player_hash) {
         Some(player) => {
-            tracing::debug!("found player '{}' [{}] in player cache", params.username, params.hash);
+            tracing::debug!("found player '{}' [{}] in player cache", username, player_hash);
             // verify the player sid and rid (digest)
-            verify_player_sid_and_rid(params.hash, &params.username,
-                                      params.sid, player.sid,
-                                      &params.rid, &player.rid)?;
+            verify_player_sid_and_rid(player_hash, username,
+                                      sid, player.sid,
+                                      rid, &player.rid)?;
             Ok(Some(player))
         },
         None => {
-            tracing::debug!("player '{}' not found in cache, querying db", params.username);
-            match get_player_from_db(&state.db, params.hash).await? {
+            tracing::debug!("player '{}' [{}] not found in cache, querying db", username, player_hash);
+            match get_player_from_db(&state.db, player_hash).await? {
                 Some(player) => {
-                    tracing::debug!("found player '{}' [{}] in db, caching it", params.username, player.hash);
+                    tracing::debug!("found player '{}' [{}] in db, caching it", username, player.hash);
                     // insert the model into the player cache
                     let arc_model = Arc::new(player.clone());
-                    state.cache.players.insert(params.hash, arc_model.clone()).await;
+                    state.cache.players.insert(player_hash, arc_model.clone()).await;
                     // verify the player sid and rid (digest)
-                    verify_player_sid_and_rid(params.hash, &params.username,
-                                              params.sid, player.sid,
-                                              &params.rid, &player.rid)?;
+                    verify_player_sid_and_rid(player_hash, username,
+                                              sid, player.sid,
+                                              rid, &player.rid)?;
                     Ok(Some(arc_model))
                 },
                 None => {
-                    tracing::debug!("player '{}' not found in db", params.username);
+                    tracing::debug!("player '{}' [{}] not found in db", username, player_hash);
                     Ok(None)
                 }
             }

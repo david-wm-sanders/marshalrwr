@@ -155,6 +155,32 @@ pub async fn get_account_from_db(db_conn: &DatabaseConnection, realm_id: i32, pl
     Ok(account)
 }
 
+pub async fn get_account(state: &AppState, realm_id: i32, player_hash: i64) -> Result<Option<Arc<AccountModel>>, ProfileServerError> {
+    tracing::debug!("searching for account '({}, {})' in account cache", realm_id, player_hash);
+    match state.cache.accounts.get(&(realm_id, player_hash)) {
+        Some(account) => {
+            tracing::debug!("found account '({}, {})' in account cache", realm_id, player_hash);
+            Ok(Some(account))
+        },
+        None => {
+            tracing::debug!("account '({}, {})' not found in account cache, querying db", realm_id, player_hash);
+            match get_account_from_db(&state.db, realm_id, player_hash).await? {
+                Some(account) => {
+                    tracing::debug!("found account '({}, {})' in db, caching it", realm_id, player_hash);
+                    // insert the model into the account cache
+                    let arc_model = Arc::new(account.clone());
+                    state.cache.accounts.insert((realm_id, player_hash), arc_model.clone()).await;
+                    Ok(Some(arc_model))
+                },
+                None => {
+                    tracing::debug!("account '({}, {})' not found in db", realm_id, player_hash);
+                    Ok(None)
+                }
+            }
+        }
+    }
+}
+
 pub async fn enlist_player(state: &AppState, params: &GetProfileParams) -> Result<Arc<PlayerModel>, ProfileServerError> {
     // todo: do any stateful validation of params now - e.g. check username against blocklist
     tracing::debug!("creating papers for player '{}'", &params.username);

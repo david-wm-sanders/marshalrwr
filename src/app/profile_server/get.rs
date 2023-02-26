@@ -6,8 +6,9 @@ use axum_macros::debug_handler;
 use super::errors::ProfileServerError;
 use super::validation::ValidatedQuery;
 use super::super::state::AppState;
-use super::util::{check_realm_is_configured, get_realm, get_player, enlist_player,
-                  make_init_profile_xml};
+use super::util::{check_realm_is_configured,
+                  get_realm, get_player, get_account,
+                  enlist_player, make_init_profile_xml};
 
 use super::params::GetProfileParams;
 
@@ -34,14 +35,31 @@ pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQu
             let init_profile_xml = make_init_profile_xml(&player.username, &player.rid)?;
             tracing::debug!("sending init profile: '{init_profile_xml}' to game server");
             // return xml response
-            return Ok((StatusCode::OK, headers, init_profile_xml).into_response());
+            Ok((StatusCode::OK, headers, init_profile_xml).into_response())
         },
         Some(player) => {
-            tracing::debug!("Some player");
-            // we have a player, try to get_account
+            tracing::debug!("found papers for player '{}'", &player.username);
+            // we have a player, try to retrieve an account for this player
+            let opt_account = get_account(&state, realm.id, player.hash).await?;
+            match opt_account {
+                None => {
+                    // this is the edge-case, a game server can make multiple get_profile requests for a player
+                    // before making the first set_profile that inserts/updates a player's account
+                    tracing::debug!("player '{}' isn't deployed in realm '{}' yet, spooling the dropship...", player.username, realm.name);
+                    // resend another init profile here :D
+                    let init_profile_xml = make_init_profile_xml(&player.username, &player.rid)?;
+                    tracing::debug!("sending init profile: '{init_profile_xml}' to game server");
+                    // return xml response
+                    Ok((StatusCode::OK, headers, init_profile_xml).into_response())
+                },
+                Some(account) => {
+                    // todo: load account from
+                    // todo!("return player's existing account (once set_profile impl is underway)");
+
+                    let s = format!("{params:#?} {state:#?}");
+                    Ok((StatusCode::OK, [(header::CONTENT_TYPE, "text/plain")], s).into_response())
+                }
+            }
         }
     }
-
-    let s = format!("{params:#?} {state:#?}");
-    Ok((StatusCode::OK, [(header::CONTENT_TYPE, "text/plain")], s).into_response())
 }

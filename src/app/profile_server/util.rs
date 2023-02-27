@@ -158,25 +158,25 @@ pub async fn get_account_from_db(db_conn: &DatabaseConnection, realm_id: i32, pl
     Ok(account)
 }
 
-pub async fn get_account(state: &AppState, realm_id: i32, player_hash: i64) -> Result<Option<Arc<AccountModel>>, ProfileServerError> {
-    tracing::debug!("searching for account '({}, {})' in account cache", realm_id, player_hash);
-    match state.cache.accounts.get(&(realm_id, player_hash)) {
+pub async fn get_account(state: &AppState, realm: &Arc<RealmModel>, player: &Arc<PlayerModel>) -> Result<Option<Arc<AccountModel>>, ProfileServerError> {
+    tracing::debug!("searching for account ('{}','{}') in account cache", realm.name, player.username);
+    match state.cache.accounts.get(&(realm.id, player.hash)) {
         Some(account) => {
-            tracing::debug!("found account '({}, {})' in account cache", realm_id, player_hash);
+            tracing::debug!("found account ('{}','{}') in account cache", realm.name, player.username);
             Ok(Some(account))
         },
         None => {
-            tracing::debug!("account '({}, {})' not found in account cache, querying db", realm_id, player_hash);
-            match get_account_from_db(&state.db, realm_id, player_hash).await? {
+            tracing::debug!("account ('{}','{}') not found in account cache, querying db", realm.name, player.username);
+            match get_account_from_db(&state.db, realm.id, player.hash).await? {
                 Some(account) => {
-                    tracing::debug!("found account '({}, {})' in db, caching it", realm_id, player_hash);
+                    tracing::debug!("found account ('{}','{}') in db, caching it", realm.name, player.username);
                     // insert the model into the account cache
                     let arc_model = Arc::new(account.clone());
-                    state.cache.accounts.insert((realm_id, player_hash), arc_model.clone()).await;
+                    state.cache.accounts.insert((realm.id, player.hash), arc_model.clone()).await;
                     Ok(Some(arc_model))
                 },
                 None => {
-                    tracing::debug!("account '({}, {})' not found in db", realm_id, player_hash);
+                    tracing::debug!("account ('{}','{}') not found in db", realm.name, player.username);
                     Ok(None)
                 }
             }

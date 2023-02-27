@@ -34,22 +34,22 @@ pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQu
             let player = enlist_player(&state, &params).await?;
             // make an initialisation profile for the player
             let init_profile_xml = make_init_profile_xml(&player.username, &player.rid)?;
-            tracing::debug!("sending init profile for '{}' in '{}' to game server", &player.username, &realm.name);
+            tracing::info!("sending init profile for '{}' in '{}' to game server", &player.username, &realm.name);
             // return xml response
             Ok((StatusCode::OK, headers, init_profile_xml).into_response())
         },
         Some(player) => {
             tracing::debug!("found papers for player '{}'", &player.username);
             // we have a player, try to retrieve an account for this player
-            let opt_account = get_account(&state, realm.id, player.hash).await?;
+            let opt_account = get_account(&state, &realm, &player).await?;
             match opt_account {
                 None => {
                     // this is the edge-case, a game server can make multiple get_profile requests for a player
                     // before making the first set_profile that inserts/updates a player's account
-                    tracing::debug!("player '{}' isn't deployed in realm '{}' yet, spooling up the dropship...", player.username, realm.name);
+                    tracing::info!("player '{}' isn't deployed in realm '{}' yet, spooling up the dropship...", player.username, realm.name);
                     // resend another init profile here :D
                     let init_profile_xml = make_init_profile_xml(&player.username, &player.rid)?;
-                    tracing::debug!("sending init profile for '{}' in '{}' to game server", &player.username, &realm.name);
+                    tracing::info!("sending init profile for '{}' in '{}' to game server", &player.username, &realm.name);
                     // return xml response
                     Ok((StatusCode::OK, headers, init_profile_xml).into_response())
                 },

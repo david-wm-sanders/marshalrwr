@@ -11,7 +11,7 @@ mod app;
 use app::signalling::shutdown_signal;
 use app::state::AppState;
 use app::profile_server::get::rwr1_get_profile_handler;
-use app::DB_DEFAULT_URL;
+use app::{VERSION, DB_DEFAULT_URL};
 
 use migration::{Migrator, MigratorTrait};
 
@@ -38,18 +38,19 @@ async fn main() -> anyhow::Result<()> {
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
-        
-    tracing::info!("loading configuration");
+
+    tracing::info!("starting marshalrwr [v{}]", VERSION.unwrap_or("n/a"));
+    tracing::info!("loading configuration...");
     let app_config: AppConfiguration = Figment::from(Serialized::defaults(AppConfiguration::default()))
                                                 .merge(Toml::file("marshalrwr.toml"))
                                                 .merge(Env::prefixed("MRWR_"))
                                                 .extract()?;
     tracing::debug!("{app_config:?}");
 
-    tracing::debug!("setting up application state");
+    tracing::debug!("setting up application state...");
     let db_connection = Database::connect(format!("{DB_DEFAULT_URL}?mode=rwc")).await?;
     
-    tracing::info!("performing migrations :D");
+    tracing::info!("performing migrations... :D");
     Migrator::up(&db_connection, None).await?;
     
     let app_state = AppState::new(app_config, db_connection);
@@ -62,7 +63,7 @@ async fn main() -> anyhow::Result<()> {
 
     // run it
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
-    tracing::info!("listening on {}", addr);
+    tracing::info!("listening on {}...", addr);
     axum::Server::bind(&addr)
         .serve(application_router.into_make_service())
         .with_graceful_shutdown(shutdown_signal())

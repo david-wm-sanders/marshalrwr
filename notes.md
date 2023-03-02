@@ -37,3 +37,6 @@ sea-orm-cli.exe generate entity -u "sqlite://classified.db" -o .\src\entity\src
 2023-02-22 03:11:40.544 | INFO     |�  [get] Verified player 'MARSHAL' (3365784589) [sid: None]
 2023-02-22 03:11:40.545 | DEBUG    |�  [get] Finding account (1, 3365784589)...
 2023-02-22 03:11:40.571 | DEBUG    |�  [get] Constructing xml for 'MARSHAL' in 'INCURSION' (1, 3365784589)...
+
+
+DEBUG request{method=POST uri=/set_profile.php?realm=INCURSION&realm_digest=17E615D232B76E060567D3327F2D31758F9CCF8ACE0319E1AD49C626F766CA5B}

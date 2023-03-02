@@ -23,3 +23,12 @@ pub struct GetProfileParams {
     #[validate(regex(path="RE_HEX_STR", code="realm digest not hexadecimal"))]
     pub realm_digest: String
 }
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct SetProfileParams {
+    #[validate(length(min=1, max=32))]
+    pub realm: String,
+    #[validate(length(equal=64))]
+    #[validate(regex(path="RE_HEX_STR", code="realm digest not hexadecimal"))]
+    pub realm_digest: String
+}

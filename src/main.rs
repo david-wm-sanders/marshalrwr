@@ -10,7 +10,7 @@ use figment::{Figment, providers::{Format, Toml, Env, Serialized}};
 mod app;
 use app::signalling::shutdown_signal;
 use app::state::AppState;
-use app::profile_server::get::rwr1_get_profile_handler;
+use app::profile_server::{get::rwr1_get_profile_handler, set::rwr1_set_profile_handler};
 use app::{VERSION, DB_DEFAULT_URL};
 
 use migration::{Migrator, MigratorTrait};
@@ -58,6 +58,7 @@ async fn main() -> anyhow::Result<()> {
     // build our application with a route and add the tower-http tracing layer
     let application_router = Router::new()
         .route("/get_profile.php", get(rwr1_get_profile_handler))
+        .route("/set_profile.php", post(rwr1_set_profile_handler))
         .with_state(app_state)
         .layer(TraceLayer::new_for_http());
 

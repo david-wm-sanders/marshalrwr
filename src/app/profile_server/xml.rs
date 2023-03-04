@@ -1,22 +1,33 @@
 use serde::Deserialize;
+use validator::Validate;
 
-#[derive(Debug, Deserialize)]
+use super::validation::{validate_username, RE_HEX_STR};
+
+// todo: validate that hash for player username
+
+#[derive(Debug, Deserialize, Validate)]
 pub struct SetProfileDataXml {
     #[serde(rename = "player")]
+    #[validate]
     pub players: Vec<PlayerXml>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 pub struct PlayerXml {
     #[serde(rename = "@hash")]
+    #[validate(range(min=1, max="u32::MAX"))]
     pub hash: i64,
     #[serde(rename = "@rid")]
+    #[validate(length(equal=64))]
+    #[validate(regex(path="RE_HEX_STR", code="rid not hexadecimal"))]
     pub rid: String,
+    #[validate]
     pub person: PersonXml,
+    #[validate]
     pub profile: ProfileXml,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 pub struct PersonXml {
     #[serde(rename = "@max_authority_reached")]
     pub max_authority_reached: f32,
@@ -39,7 +50,7 @@ pub struct PersonXml {
     pub equipped_items: Vec<EquippedItemXml>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 pub struct EquippedItemXml {
     #[serde(rename = "@slot")]
     pub slot: i32,
@@ -51,23 +62,29 @@ pub struct EquippedItemXml {
     pub key: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 pub struct ProfileXml {
     #[serde(rename = "@game_version")]
     pub game_version: i32,
     #[serde(rename = "@username")]
+    #[validate(length(min=1, max=32))]
+    #[validate(non_control_character)]
+    #[validate(custom(function="validate_username"))]
     pub username: String,
     #[serde(rename = "@sid")]
+    #[validate(range(min=1, max="u32::MAX"))]
     pub sid: i64,
     #[serde(rename = "@rid")]
+    #[validate(length(equal=64))]
+    #[validate(regex(path="RE_HEX_STR", code="rid not hexadecimal"))]
     pub rid: String,
     #[serde(rename = "@squad_tag")]
+    #[validate(length(min=0, max=3))]
     pub squad_tag: String,
-    // #[serde(rename = "@")]
     pub stats: StatsXml,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 pub struct StatsXml {
     #[serde(rename = "@kills")]
     pub kills: i32,

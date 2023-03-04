@@ -28,6 +28,13 @@ pub async fn rwr1_set_profile_handler(
     let realm = get_realm(&state, &params.realm, &params.realm_digest).await?;
 
     tracing::debug!("{data:#?}");
+    for player in data.players.iter() {
+        tracing::debug!("processing set xml for player '{}'", player.hash);
+        // todo: get the player and check that the rid matches expected value from cache/db
+        // todo: construct account active model from player xml
+        // todo: add this to a vec?
+    }
+    // todo: insert many active model accounts with on_conflict to update
 
     Ok((StatusCode::OK).into_response())
 }

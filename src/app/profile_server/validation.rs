@@ -43,7 +43,7 @@ pub struct ValidatedXmlBody<T>(pub T);
 #[async_trait]
 impl<T, S, B> FromRequest<S, B> for ValidatedXmlBody<T>
 where
-    T: DeserializeOwned /*+ Validate*/,
+    T: DeserializeOwned + Validate,
     B: HttpBody + Send + 'static,
     B::Data: Send,
     B::Error: Into<BoxError>,
@@ -60,8 +60,9 @@ where
         // tracing::debug!("{xml_str:#?}");
         let decoded_xml_str = percent_decode_str(xml_str).decode_utf8().unwrap();
         // tracing::debug!("{decoded_xml_str:#?}");
-        let data = quick_xml::de::from_str(decoded_xml_str.as_ref())?;
-        // todo: validation...
+        let data: T = quick_xml::de::from_str(decoded_xml_str.as_ref())?;
+        // validate the xml data
+        data.validate()?;
         Ok(Self(data))
     }
 }

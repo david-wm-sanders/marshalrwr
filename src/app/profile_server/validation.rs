@@ -1,15 +1,18 @@
 use lazy_static::lazy_static;
 use validator::ValidationError;
 use regex::Regex;
-use async_trait::async_trait;
-use axum::extract::{Query, FromRequestParts, rejection::QueryRejection};
-use axum::http::request::Parts;
+// use async_trait::async_trait;
+use axum::extract::{Query, FromRequest, FromRequestParts, rejection::QueryRejection};
+use axum::http::request::{Request, Parts};
+use axum::body::{Bytes, HttpBody};
+use axum::{async_trait, BoxError};
 use serde::de::DeserializeOwned;
 use validator::Validate;
+use percent_encoding::percent_decode_str;
 
+use super::errors::ProfileServerError;
 use super::params::GetProfileParams;
 use super::super::hasher::rwr1_hash_username;
-use super::errors::ProfileServerError;
 
 lazy_static! {
     pub static ref RE_HEX_STR: Regex = Regex::new(r"^([0-9A-Fa-f]{2})+$").unwrap();
@@ -33,6 +36,49 @@ where
         Ok(ValidatedQuery(params))
     }
 }
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct ValidatedXmlBody<T>(pub T);
+
+#[async_trait]
+impl<T, S, B> FromRequest<S, B> for ValidatedXmlBody<T>
+where
+    T: DeserializeOwned /*+ Validate*/,
+    B: HttpBody + Send + 'static,
+    B::Data: Send,
+    B::Error: Into<BoxError>,
+    S: Send + Sync,
+{
+    type Rejection = ProfileServerError;
+
+    async fn from_request(req: Request<B>, state: &S) -> Result<Self, Self::Rejection> {
+        let body = Bytes::from_request(req, state).await?;
+        // the xml body bytes are percent/url-encoded, decode first
+        let body_vec = body.into_iter().collect::<Vec<u8>>();
+        // todo: get rid of these unwrap here, probably goto ? and add extra variants to ProfileServerError
+        let xml_str = std::str::from_utf8(&body_vec).unwrap();
+        // tracing::debug!("{xml_str:#?}");
+        let decoded_xml_str = percent_decode_str(xml_str).decode_utf8().unwrap();
+        // tracing::debug!("{decoded_xml_str:#?}");
+        let data = quick_xml::de::from_str(decoded_xml_str.as_ref())?;
+        // todo: validation...
+        Ok(Self(data))
+    }
+}
+
+// impl<T> Deref for ValidatedXmlBody<T> {
+//     type Target = T;
+
+//     fn deref(&self) -> &Self::Target {
+//         &self.0
+//     }
+// }
+
+// impl<T> DerefMut for ValidatedXmlBody<T> {
+//     fn deref_mut(&mut self) -> &mut Self::Target {
+//         &mut self.0
+//     }
+// }
 
 pub fn validate_username(username: &str) -> Result<(), ValidationError> {
     if username.contains("  ") {

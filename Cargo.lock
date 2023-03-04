@@ -1054,6 +1054,7 @@ dependencies = [
  "lazy_static",
  "migration",
  "moka",
+ "percent-encoding",
  "quick-xml",
  "regex",
  "sea-orm",

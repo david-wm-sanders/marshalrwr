@@ -1,12 +1,12 @@
-use axum::http::{StatusCode, header};
-use axum::response::{Response, IntoResponse};
 use axum::extract::State;
+use axum::http::{header, StatusCode};
+use axum::response::{IntoResponse, Response};
 use axum_macros::debug_handler;
 
+use super::super::state::AppState;
 use super::errors::ProfileServerError;
 use super::validation::{ValidatedQuery, ValidatedXmlBody};
 use super::xml::SetProfileDataXml;
-use super::super::state::AppState;
 
 use super::util::{check_realm_is_configured, get_realm};
 
@@ -16,10 +16,10 @@ use super::params::SetProfileParams;
 pub async fn rwr1_set_profile_handler(
     State(state): State<AppState>,
     ValidatedQuery(params): ValidatedQuery<SetProfileParams>,
-    ValidatedXmlBody(data): ValidatedXmlBody<SetProfileDataXml>)
-    -> Result<Response, ProfileServerError> {
-    let headers  = [(header::CONTENT_TYPE, "text/xml")];
-    
+    ValidatedXmlBody(data): ValidatedXmlBody<SetProfileDataXml>,
+) -> Result<Response, ProfileServerError> {
+    let headers = [(header::CONTENT_TYPE, "text/xml")];
+
     // check that the realm has been configured, see fn comments for more detail
     check_realm_is_configured(&state, &params.realm)?;
 

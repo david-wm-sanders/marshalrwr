@@ -97,7 +97,7 @@ pub async fn rwr1_set_profile_handler(
                                         .update_columns([AccountColumn::RealmId, AccountColumn::Hash])
                                         .to_owned())
                         .exec(&state.db).await?;
-                        
+
     tracing::debug!("inserted accounts into db, last insert = ({},{})", res.last_insert_id.0, res.last_insert_id.1);
 
     // todo: need to make proper <data ok="1"/> response here with headers etc

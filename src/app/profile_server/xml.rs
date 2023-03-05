@@ -1,7 +1,10 @@
-use serde::Deserialize;
+use std::sync::Arc;
+
+use serde::{Serialize, Deserialize};
 use validator::Validate;
 
 use super::validation::{validate_username, RE_HEX_STR};
+use entity::{PlayerModel, AccountModel};
 
 // todo: validate that hash for player username
 
@@ -27,7 +30,7 @@ pub struct PlayerXml {
     pub profile: ProfileXml,
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Serialize, Deserialize, Validate)]
 pub struct PersonXml {
     #[serde(rename = "@max_authority_reached")]
     pub max_authority_reached: f32,
@@ -50,7 +53,7 @@ pub struct PersonXml {
     pub equipped_items: Vec<EquippedItemXml>,
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Serialize, Deserialize, Validate)]
 pub struct EquippedItemXml {
     #[serde(rename = "@slot")]
     pub slot: i32,
@@ -62,7 +65,7 @@ pub struct EquippedItemXml {
     pub key: String,
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Serialize, Deserialize, Validate)]
 pub struct ProfileXml {
     #[serde(rename = "@game_version")]
     pub game_version: i32,
@@ -84,7 +87,7 @@ pub struct ProfileXml {
     pub stats: StatsXml,
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Serialize, Deserialize, Validate)]
 pub struct StatsXml {
     #[serde(rename = "@kills")]
     pub kills: i32,
@@ -113,4 +116,56 @@ pub struct StatsXml {
     #[serde(rename = "@rank_progression")]
     pub rank_progression: f32,
     // todo: add monitors
+}
+
+#[derive(Debug, Serialize)]
+pub struct GetProfileDataXml {
+    #[serde(rename = "@ok")]
+    ok: i32,
+    profile: ProfileXml,
+    person: PersonXml,
+}
+
+
+impl GetProfileDataXml {
+    pub fn new(player: &Arc<PlayerModel>, account: &Arc<AccountModel>) -> Self {
+        Self {
+            ok: 1,
+            person: PersonXml {
+                // todo: make all account colums non-nullable (probably)!
+                max_authority_reached: account.max_authority_reached.unwrap_or(0f64) as f32,
+                authority: account.authority.unwrap_or(0f64) as f32,
+                job_points: account.job_points.unwrap_or(0f64) as f32,
+                faction: account.faction.unwrap_or(0),
+                name: account.name.clone().unwrap_or(String::from("Bob Bob")),
+                soldier_group_id: account.soldier_group_id.unwrap_or(0),
+                soldier_group_name: account.soldier_group_name.clone().unwrap_or(String::from("default")),
+                squad_size_setting: account.squad_size_setting.unwrap_or(-1),
+                // todo: populate this vec from the account loadout
+                equipped_items: vec![],
+            },
+            profile: ProfileXml {
+                game_version: account.game_version.unwrap_or(0),
+                username: player.username.clone(),
+                sid: player.sid,
+                rid: player.rid.clone(),
+                squad_tag: account.squad_tag.clone().unwrap_or(String::from("")),
+                stats: StatsXml {
+                    kills: account.kills.unwrap_or(0),
+                    deaths: account.deaths.unwrap_or(0),
+                    time_played: account.time_played.unwrap_or(0) as f32,
+                    player_kills: account.player_kills.unwrap_or(0),
+                    teamkills: account.teamkills.unwrap_or(0),
+                    longest_kill_streak: account.longest_kill_streak.unwrap_or(0),
+                    targets_destroyed: account.targets_destroyed.unwrap_or(0),
+                    vehicles_destroyed: account.vehicles_destroyed.unwrap_or(0),
+                    soldiers_healed: account.soldiers_healed.unwrap_or(0),
+                    distance_moved: account.distance_moved.unwrap_or(0f64) as f32,
+                    shots_fired: account.shots_fired.unwrap_or(0),
+                    throwables_thrown: account.throwables_thrown.unwrap_or(0),
+                    rank_progression: account.rank_progression.unwrap_or(0f64) as f32,
+                }
+            },
+        }
+    }
 }

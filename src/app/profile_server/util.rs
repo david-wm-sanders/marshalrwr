@@ -3,12 +3,15 @@ use std::io::Cursor;
 
 use sea_orm::{DatabaseConnection, ActiveValue, ActiveModelTrait};
 use sea_orm::{EntityTrait, QueryFilter, ColumnTrait, error::DbErr};
+use serde::Serialize;
 use subtle::ConstantTimeEq;
 use quick_xml::{events::{Event, BytesStart, BytesEnd}, writer::Writer, escape::{escape, unescape}};
+use quick_xml::se::Serializer as QuickXmlSerializer;
 
 use super::errors::ProfileServerError;
 use super::params::GetProfileParams;
 use super::super::state::AppState;
+use super::xml::GetProfileDataXml;
 use entity::{Realm, RealmModel, RealmActiveModel, RealmColumn};
 use entity::{Player, PlayerModel, PlayerActiveModel, PlayerColumn};
 use entity::{Account, AccountModel, AccountActiveModel, AccountColumn};
@@ -218,4 +221,13 @@ pub fn make_init_profile_xml(username: &str, rid: &str) -> Result<String, Profil
     // append a newline to the end of the XML otherwise the rwr game server XML parser won't be happy :D
     result.push_str("\n");
     Ok(result)
+}
+
+pub fn make_account_xml(player: &Arc<PlayerModel>, account: &Arc<AccountModel>) -> String {
+    // todo: make return Result and improve error handling
+    let data = GetProfileDataXml::new(player, account);
+    let serializer = QuickXmlSerializer::with_root(String::new(), Some("data")).unwrap();
+    let mut xml = data.serialize(serializer).unwrap();
+    xml.push_str("\n");
+    xml
 }

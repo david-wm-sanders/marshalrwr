@@ -8,7 +8,8 @@ use super::validation::ValidatedQuery;
 use super::super::state::AppState;
 use super::util::{check_realm_is_configured,
                   get_realm, get_player, get_account,
-                  enlist_player, make_init_profile_xml};
+                  enlist_player, make_init_profile_xml,
+                  make_account_xml};
 
 use super::params::GetProfileParams;
 
@@ -49,16 +50,17 @@ pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQu
                     tracing::info!("player '{}' isn't deployed in realm '{}' yet...", player.username, realm.name);
                     // resend another init profile here :D
                     let init_profile_xml = make_init_profile_xml(&player.username, &player.rid)?;
-                    tracing::info!("sending init profile for '{}' in '{}' to game server", &player.username, &realm.name);
+                    tracing::info!("sending init profile for '{}' in '{}' to game server", player.username, realm.name);
                     // return xml response
                     Ok((StatusCode::OK, headers, init_profile_xml).into_response())
                 },
                 Some(account) => {
-                    // todo: load account from
-                    // todo!("return player's existing account (once set_profile impl is underway)");
-
-                    let s = format!("{params:#?} {state:#?}");
-                    Ok((StatusCode::OK, [(header::CONTENT_TYPE, "text/plain")], s).into_response())
+                    // found account for player in realm
+                    tracing::debug!("found account for player '{}' in realm '{}'", player.username, realm.name);
+                    let account_xml = make_account_xml(&player, &account); 
+                    tracing::debug!("{account_xml:#?}");
+                    tracing::debug!("sending person-profile for '{}' in '{}' to game server", player.username, realm.name);
+                    Ok((StatusCode::OK, headers, account_xml).into_response())
                 }
             }
         }

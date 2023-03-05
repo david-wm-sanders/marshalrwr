@@ -16,6 +16,14 @@ use entity::{Realm, RealmModel, RealmActiveModel, RealmColumn};
 use entity::{Player, PlayerModel, PlayerActiveModel, PlayerColumn};
 use entity::{Account, AccountModel, AccountActiveModel, AccountColumn};
 
+pub const ACCOUNT_COLUMNS: [AccountColumn; 25] = [AccountColumn::RealmId, AccountColumn::Hash, AccountColumn::GameVersion, AccountColumn::SquadTag,
+                                                  AccountColumn::MaxAuthorityReached, AccountColumn::Authority, AccountColumn::JobPoints, AccountColumn::Faction,
+                                                  AccountColumn::Name, AccountColumn::SoldierGroupId, AccountColumn::SoldierGroupName, AccountColumn::SquadSizeSetting,
+                                                  AccountColumn::Kills, AccountColumn::Deaths, AccountColumn::TimePlayed,
+                                                  AccountColumn::PlayerKills, AccountColumn::Teamkills, AccountColumn::LongestKillStreak,
+                                                  AccountColumn::TargetsDestroyed, AccountColumn::VehiclesDestroyed, AccountColumn::SoldiersHealed,
+                                                  AccountColumn::DistanceMoved, AccountColumn::ShotsFired, AccountColumn::ThrowablesThrown, AccountColumn::RankProgression];
+
 pub fn check_realm_is_configured(state: &AppState, realm: &str) -> Result<(), ProfileServerError> {
     // check that this realm is in state.config, this acts as a guard whilst the realm digest algo remains a mystery
     // as we cannot derive the digest from knowing the realm secret and pw, the server expects the realms to be named (e.g. ["INCURSION"]) in the config instead

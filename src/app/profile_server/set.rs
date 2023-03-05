@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use axum::extract::State;
 use axum::http::{header, StatusCode};
 use axum::response::{IntoResponse, Response};
@@ -11,9 +13,10 @@ use super::validation::{ValidatedQuery, ValidatedXmlBody};
 use super::xml::SetProfileDataXml;
 
 use super::util::{check_realm_is_configured, get_realm, get_player};
+use super::util::ACCOUNT_COLUMNS;
 use super::params::SetProfileParams;
 
-use entity::{Account, AccountActiveModel, AccountColumn};
+use entity::{Account, AccountModel, AccountActiveModel, AccountColumn};
 
 #[debug_handler]
 pub async fn rwr1_set_profile_handler(
@@ -77,24 +80,30 @@ pub async fn rwr1_set_profile_handler(
                     throwables_thrown: ActiveValue::Set(Some(player_xml.profile.stats.throwables_thrown)),
                     rank_progression: ActiveValue::Set(Some(player_xml.profile.stats.rank_progression as f64))
                 };
+                // update the model in the cache
+                let account_model: AccountModel = account.clone().try_into().unwrap();
+                let arc_model = Arc::new(account_model);
+                state.cache.accounts.insert((realm.id, player_xml.hash), arc_model).await;
                 // add account to vec of accounts to update in bulk insert many
                 accounts_to_update.push(account);
             }
         }
     }
-    // invalidate these accounts in the cache
-    tracing::debug!("invalidating old accounts in cache...");
-    for account in accounts_to_update.iter() {
-        let hash = account.hash.clone().unwrap();
-        state.cache.accounts.invalidate(&(realm.id, hash)).await;
-    }
+    // // invalidate these accounts in the cache
+    // tracing::debug!("invalidating old accounts in cache...");
+    // for account in accounts_to_update.iter() {
+    //     let hash = account.hash.clone().unwrap();
+    //     // state.cache.accounts.invalidate(&(realm.id, hash)).await;
+    //     state.cache.accounts.blocking().invalidate(&(realm.id, hash));
+    // }
+
     // insert many active model accounts with on_conflict to update
     tracing::debug!("inserting many account models into db...");
     // todo: need to check that this is "atomic" (making insert many sql) and doesn't need a transaction
     let res = Account::insert_many(accounts_to_update)
                         .on_conflict(
                             OnConflict::columns([AccountColumn::RealmId, AccountColumn::Hash])
-                                        .update_columns([AccountColumn::RealmId, AccountColumn::Hash])
+                                        .update_columns(ACCOUNT_COLUMNS)
                                         .to_owned())
                         .exec(&state.db).await?;
 

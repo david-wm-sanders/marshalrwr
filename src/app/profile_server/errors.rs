@@ -3,7 +3,7 @@ use std::io::Cursor;
 use thiserror::Error;
 use axum::extract::rejection::{QueryRejection, BytesRejection};
 use axum::response::{IntoResponse, Response};
-use axum::http::{StatusCode, header::{self}};
+use axum::http::{StatusCode, header};
 use validator::ValidationErrors;
 use sea_orm::error::DbErr;
 use quick_xml::Error as QXmlError;
@@ -31,6 +31,8 @@ pub enum ProfileServerError {
     PlayerSidMismatch(i64, String, i64, i64),
     #[error("player '{1}' [hash:{0}, sid:{2}] rid '{3}' incorrect")]
     PlayerRidIncorrect(i64, String, i64, String),
+    #[error("player '{1}' [hash:{0}, sid:{2}] not found in db")]
+    PlayerNotFound(i64, String, i64),
 }
 
 impl ProfileServerError {
@@ -54,6 +56,7 @@ impl ProfileServerError {
                 format!("player '{username}' [{hash}] sid '{given_sid}' does not match existing sid"),
             ProfileServerError::PlayerRidIncorrect(hash, username, _sid, given_rid) =>
                 format!("player '{username}' [{hash}] rid '{given_rid}' incorrect"),
+            ProfileServerError::PlayerNotFound(_, _, _) => self.to_string(),
         };
         // escape the issue :D
         let escaped_issue = escape(&issue).to_string();
@@ -84,6 +87,7 @@ impl IntoResponse for ProfileServerError {
             ProfileServerError::RealmDigestIncorrect(_, _) => (StatusCode::UNAUTHORIZED, headers, self.to_xml_string()),
             ProfileServerError::PlayerSidMismatch(_, _, _, _) => (StatusCode::UNAUTHORIZED, headers, self.to_xml_string()),
             ProfileServerError::PlayerRidIncorrect(_, _, _, _) => (StatusCode::UNAUTHORIZED, headers, self.to_xml_string()),
+            ProfileServerError::PlayerNotFound(_, _, _) => (StatusCode::BAD_REQUEST, headers, self.to_xml_string()),
         }
         .into_response()
     }

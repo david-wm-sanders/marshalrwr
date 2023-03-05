@@ -2,7 +2,8 @@ use axum::extract::State;
 use axum::http::{header, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum_macros::debug_handler;
-use sea_orm::ActiveValue;
+use migration::OnConflict;
+use sea_orm::{ActiveValue, EntityTrait};
 
 use super::super::state::AppState;
 use super::errors::ProfileServerError;
@@ -12,7 +13,7 @@ use super::xml::SetProfileDataXml;
 use super::util::{check_realm_is_configured, get_realm, get_player};
 use super::params::SetProfileParams;
 
-use entity::AccountActiveModel;
+use entity::{Account, AccountActiveModel, AccountColumn};
 
 #[debug_handler]
 pub async fn rwr1_set_profile_handler(
@@ -81,10 +82,23 @@ pub async fn rwr1_set_profile_handler(
         }
     }
     // invalidate these accounts in the cache
-    for account in accounts_to_update.iter() {
-        let hash = account.hash.clone().unwrap();
+    tracing::debug!("invalidating old accounts in cache...");
+    for a in accounts_to_update.iter() {
+        let hash = a.hash.clone().unwrap();
         state.cache.accounts.invalidate(&(realm.id, hash)).await;
     }
-    // todo: insert many active model accounts with on_conflict to update
+    // insert many active model accounts with on_conflict to update
+    tracing::debug!("inserting many account models into db...");
+    // todo: need to check that this is "atomic" (making insert many sql) and doesn't need a transaction
+    let res = Account::insert_many(accounts_to_update)
+                        .on_conflict(
+                            OnConflict::columns([AccountColumn::RealmId, AccountColumn::Hash])
+                                        .update_columns([AccountColumn::RealmId, AccountColumn::Hash])
+                                        .to_owned())
+                        .exec(&state.db).await?;
+                        
+    tracing::debug!("inserted accounts into db, last insert = ({},{})", res.last_insert_id.0, res.last_insert_id.1);
+
+    // todo: need to make proper <data ok="1"/> response here with headers etc
     Ok((StatusCode::OK).into_response())
 }

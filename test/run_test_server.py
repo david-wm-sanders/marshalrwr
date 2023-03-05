@@ -4,11 +4,6 @@ import shutil
 import subprocess
 import xml.etree.ElementTree as XmlET
 
-# this magic allows for Ctrl+C to PyCharm run console to be handled nicely
-try:
-    from console_thrift import KeyboardInterruptException as KeyboardInterrupt  # noqa
-except ImportError:
-    pass
 
 SCRIPT_DIR = pathlib.Path(__file__).parent
 PKG_CFG = SCRIPT_DIR / "package_config.xml"
@@ -33,7 +28,6 @@ def wait_for_server_load(proc):
         _output_line = proc.stdout.readline().lstrip(">")
         # strip the line for easier processing
         _stripped_line = _output_line.strip()
-        # print(f"{stripped_line=!r}")
         if _stripped_line.startswith("Loading"):
             _s = next(_spinner_steps)
             print(f"{_s} Loading...", end="\r")
@@ -67,8 +61,6 @@ if __name__ == '__main__':
     path_to_package = f"media/packages/{TEST_PKG_DIR.name}"
     print(f"Starting RWR server for '{path_to_package}' package...")
     rwr_serv_args = [f"{RWR_SERV}"]
-    # rwr_serv_args = [f"{RWR_SERV}", "verbose"]
-    # rwr_serv = subprocess.run(rwr_serv_args, cwd=RWR_ROOT.absolute(), encoding="utf-8")
     rwr_serv = subprocess.Popen(rwr_serv_args, cwd=RWR_ROOT.absolute(), encoding="utf-8",
                                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     try:
@@ -89,9 +81,6 @@ if __name__ == '__main__':
             # strip the line for easier processing
             stripped_line = output_line.strip()
             print(stripped_line)
-            # time.sleep(10)
-            # todo: print status
     except KeyboardInterrupt:
         print("Ctrl-C detected, shutting down!")
         rwr_serv.kill()
-

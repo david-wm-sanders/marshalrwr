@@ -46,7 +46,7 @@ pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQu
                 None => {
                     // this is the edge-case, a game server can make multiple get_profile requests for a player
                     // before making the first set_profile that inserts/updates a player's account
-                    tracing::info!("player '{}' isn't deployed in realm '{}' yet, spooling up the dropship...", player.username, realm.name);
+                    tracing::info!("player '{}' isn't deployed in realm '{}' yet...", player.username, realm.name);
                     // resend another init profile here :D
                     let init_profile_xml = make_init_profile_xml(&player.username, &player.rid)?;
                     tracing::info!("sending init profile for '{}' in '{}' to game server", &player.username, &realm.name);

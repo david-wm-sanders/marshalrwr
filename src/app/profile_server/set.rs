@@ -47,7 +47,7 @@ pub async fn rwr1_set_profile_handler(
             },
             Some(player) => {
                 tracing::debug!("creating account model for player '{}' from xml...", &player.username);
-                // todo: construct account active model from player xml
+                // construct account active model from player xml
                 let account = AccountActiveModel {
                     realm_id: ActiveValue::Set(realm.id),
                     hash: ActiveValue::Set(player_xml.hash),
@@ -77,14 +77,15 @@ pub async fn rwr1_set_profile_handler(
                     throwables_thrown: ActiveValue::Set(Some(player_xml.profile.stats.throwables_thrown)),
                     rank_progression: ActiveValue::Set(Some(player_xml.profile.stats.rank_progression as f64))
                 };
+                // add account to vec of accounts to update in bulk insert many
                 accounts_to_update.push(account);
             }
         }
     }
     // invalidate these accounts in the cache
     tracing::debug!("invalidating old accounts in cache...");
-    for a in accounts_to_update.iter() {
-        let hash = a.hash.clone().unwrap();
+    for account in accounts_to_update.iter() {
+        let hash = account.hash.clone().unwrap();
         state.cache.accounts.invalidate(&(realm.id, hash)).await;
     }
     // insert many active model accounts with on_conflict to update

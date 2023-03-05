@@ -45,13 +45,13 @@ impl Default for CacheManager {
                     .eviction_listener_with_queued_delivery_mode(|key, value: Arc<PlayerModel>, removal_cause| {
                         match removal_cause {
                             moka::notification::RemovalCause::Expired =>
-                                tracing::debug!("player '{}' [hash:{}, sid:{}] expired and was evicted from the cache", &key, value.hash, value.sid),
+                                tracing::debug!("player '{}' [hash:{}, sid:{}] expired and was evicted from the cache", value.username, value.hash, value.sid),
                             moka::notification::RemovalCause::Explicit =>
-                                tracing::debug!("player '{}' [hash:{}, sid:{}] was explictly removed from the cache", &key, value.hash, value.sid),
+                                tracing::debug!("player '{}' [hash:{}, sid:{}] was explictly removed from the cache", value.username, value.hash, value.sid),
                             moka::notification::RemovalCause::Replaced =>
-                                tracing::debug!("player '{}' [hash:{}, sid:{}] was replaced in the cache", &key, value.hash, value.sid),
+                                tracing::debug!("player '{}' [hash:{}, sid:{}] was replaced in the cache", value.username, value.hash, value.sid),
                             moka::notification::RemovalCause::Size =>
-                                tracing::debug!("player '{}' [hash:{}, sid:{}] was evicted from the cache due to size constraints", &key, value.hash, value.sid)
+                                tracing::debug!("player '{}' [hash:{}, sid:{}] was evicted from the cache due to size constraints", value.username, value.hash, value.sid)
                             }
                     })
                     .build(),
@@ -62,19 +62,15 @@ impl Default for CacheManager {
                     .time_to_live(Duration::from_secs(30*60))
                     .time_to_idle(Duration::from_secs(15*60))
                     .eviction_listener_with_queued_delivery_mode(|key: Arc<(i32, i64)>, value: Arc<AccountModel>, removal_cause| {
-                        let character_name = match &value.name {
-                            Some(character_name) => character_name.to_owned(),
-                            None => "".to_owned()
-                        };
                         match removal_cause {
                             moka::notification::RemovalCause::Expired =>
-                                tracing::debug!("account '({}, {})' [{}] expired and was evicted from the cache", key.0, key.1, character_name),
+                                tracing::debug!("account '({}, {})' expired and was evicted from the cache", key.0, key.1),
                             moka::notification::RemovalCause::Explicit =>
-                                tracing::debug!("account '({}, {})' [{}] was explictly removed from the cache", key.0, key.1, character_name),
+                                tracing::debug!("account '({}, {})' was explictly removed from the cache", key.0, key.1),
                             moka::notification::RemovalCause::Replaced =>
-                                tracing::debug!("account '({}, {})' [{}] was replaced in the cache", key.0, key.1, character_name),
+                                tracing::debug!("account '({}, {})' was replaced in the cache", key.0, key.1),
                             moka::notification::RemovalCause::Size =>
-                                tracing::debug!("account '({}, {})' [{}] was evicted from the cache due to size constraints", key.0, key.1, character_name)
+                                tracing::debug!("account '({}, {})' was evicted from the cache due to size constraints", key.0, key.1)
                         }
                     })
                     .build(),

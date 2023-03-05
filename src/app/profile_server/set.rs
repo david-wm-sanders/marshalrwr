@@ -80,25 +80,22 @@ pub async fn rwr1_set_profile_handler(
                     throwables_thrown: ActiveValue::Set(Some(player_xml.profile.stats.throwables_thrown)),
                     rank_progression: ActiveValue::Set(Some(player_xml.profile.stats.rank_progression as f64))
                 };
-                // update the model in the cache
-                let account_model: AccountModel = account.clone().try_into().unwrap();
-                let arc_model = Arc::new(account_model);
-                state.cache.accounts.insert((realm.id, player_xml.hash), arc_model).await;
                 // add account to vec of accounts to update in bulk insert many
                 accounts_to_update.push(account);
             }
         }
     }
-    // // invalidate these accounts in the cache
-    // tracing::debug!("invalidating old accounts in cache...");
-    // for account in accounts_to_update.iter() {
-    //     let hash = account.hash.clone().unwrap();
-    //     // state.cache.accounts.invalidate(&(realm.id, hash)).await;
-    //     state.cache.accounts.blocking().invalidate(&(realm.id, hash));
-    // }
 
+    // update accounts models in cache
+    tracing::debug!("inserting/updating accounts in cache...");
+    for account in accounts_to_update.iter() {
+        let account_model: AccountModel = account.clone().try_into().unwrap();
+        let hash = account_model.hash;
+        let arc_model = Arc::new(account_model);
+        state.cache.accounts.insert((realm.id, hash), arc_model).await;
+    }
     // insert many active model accounts with on_conflict to update
-    tracing::debug!("inserting many account models into db...");
+    tracing::debug!("inserting account model(s) into db...");
     // todo: need to check that this is "atomic" (making insert many sql) and doesn't need a transaction
     let res = Account::insert_many(accounts_to_update)
                         .on_conflict(

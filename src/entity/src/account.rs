@@ -9,34 +9,34 @@ pub struct Model {
     pub realm_id: i32,
     #[sea_orm(primary_key, auto_increment = false)]
     pub hash: i64,
-    pub game_version: Option<i32>,
-    pub squad_tag: Option<String>,
-    #[sea_orm(column_type = "Double", nullable)]
-    pub max_authority_reached: Option<f64>,
-    #[sea_orm(column_type = "Double", nullable)]
-    pub authority: Option<f64>,
-    #[sea_orm(column_type = "Double", nullable)]
-    pub job_points: Option<f64>,
-    pub faction: Option<i32>,
-    pub name: Option<String>,
-    pub soldier_group_id: Option<i32>,
-    pub soldier_group_name: Option<String>,
-    pub squad_size_setting: Option<i32>,
-    pub kills: Option<i32>,
-    pub deaths: Option<i32>,
-    pub time_played: Option<i32>,
-    pub player_kills: Option<i32>,
-    pub teamkills: Option<i32>,
-    pub longest_kill_streak: Option<i32>,
-    pub targets_destroyed: Option<i32>,
-    pub vehicles_destroyed: Option<i32>,
-    pub soldiers_healed: Option<i32>,
-    #[sea_orm(column_type = "Double", nullable)]
-    pub distance_moved: Option<f64>,
-    pub shots_fired: Option<i32>,
-    pub throwables_thrown: Option<i32>,
-    #[sea_orm(column_type = "Double", nullable)]
-    pub rank_progression: Option<f64>,
+    pub game_version: i32,
+    pub squad_tag: String,
+    #[sea_orm(column_type = "Double")]
+    pub max_authority_reached: f64,
+    #[sea_orm(column_type = "Double")]
+    pub authority: f64,
+    #[sea_orm(column_type = "Double")]
+    pub job_points: f64,
+    pub faction: i32,
+    pub name: String,
+    pub soldier_group_id: i32,
+    pub soldier_group_name: String,
+    pub squad_size_setting: i32,
+    pub kills: i32,
+    pub deaths: i32,
+    pub time_played: i32,
+    pub player_kills: i32,
+    pub teamkills: i32,
+    pub longest_kill_streak: i32,
+    pub targets_destroyed: i32,
+    pub vehicles_destroyed: i32,
+    pub soldiers_healed: i32,
+    #[sea_orm(column_type = "Double")]
+    pub distance_moved: f64,
+    pub shots_fired: i32,
+    pub throwables_thrown: i32,
+    #[sea_orm(column_type = "Double")]
+    pub rank_progression: f64,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

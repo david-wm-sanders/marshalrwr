@@ -27,7 +27,7 @@ impl MigrationTrait for Migration {
             )
             .await?;
             
-        // todo: create index and foreign key?!
+        // create realm name index
         manager.create_index(Index::create().name("idx_realm_name").table(Realm::Table).col(Realm::Name).to_owned()).await?;
         
         Ok(())

@@ -11,7 +11,7 @@ use quick_xml::se::Serializer as QuickXmlSerializer;
 use super::errors::ProfileServerError;
 use super::params::GetProfileParams;
 use super::super::state::AppState;
-use super::xml::GetProfileDataXml;
+use super::xml::{GetProfileDataXml, PlayerXml};
 use entity::{Realm, RealmModel, RealmActiveModel, RealmColumn};
 use entity::{Player, PlayerModel, PlayerActiveModel, PlayerColumn};
 use entity::{Account, AccountModel, AccountActiveModel, AccountColumn};
@@ -229,6 +229,36 @@ pub fn make_init_profile_xml(username: &str, rid: &str) -> Result<String, Profil
     // append a newline to the end of the XML otherwise the rwr game server XML parser won't be happy :D
     result.push_str("\n");
     Ok(result)
+}
+
+pub fn make_account_model(realm_id: i32, player_xml: &PlayerXml) -> AccountActiveModel {
+    AccountActiveModel {
+                    realm_id: ActiveValue::Set(realm_id),
+                    hash: ActiveValue::Set(player_xml.hash),
+                    game_version: ActiveValue::Set(player_xml.profile.game_version),
+                    squad_tag: ActiveValue::Set(player_xml.profile.squad_tag.to_owned()),
+                    max_authority_reached: ActiveValue::Set(player_xml.person.max_authority_reached as f64),
+                    authority: ActiveValue::Set(player_xml.person.authority as f64),
+                    job_points: ActiveValue::Set(player_xml.person.job_points as f64),
+                    faction: ActiveValue::Set(player_xml.person.faction),
+                    name: ActiveValue::Set(player_xml.person.name.to_owned()),
+                    soldier_group_id: ActiveValue::Set(player_xml.person.soldier_group_id),
+                    soldier_group_name: ActiveValue::Set(player_xml.person.soldier_group_name.to_owned()),
+                    squad_size_setting: ActiveValue::Set(player_xml.person.squad_size_setting),
+                    kills: ActiveValue::Set(player_xml.profile.stats.kills),
+                    deaths: ActiveValue::Set(player_xml.profile.stats.deaths),
+                    time_played: ActiveValue::Set(player_xml.profile.stats.time_played as i32),
+                    player_kills: ActiveValue::Set(player_xml.profile.stats.player_kills),
+                    teamkills: ActiveValue::Set(player_xml.profile.stats.teamkills),
+                    longest_kill_streak: ActiveValue::Set(player_xml.profile.stats.longest_kill_streak),
+                    targets_destroyed: ActiveValue::Set(player_xml.profile.stats.targets_destroyed),
+                    vehicles_destroyed: ActiveValue::Set(player_xml.profile.stats.vehicles_destroyed),
+                    soldiers_healed: ActiveValue::Set(player_xml.profile.stats.soldiers_healed),
+                    distance_moved: ActiveValue::Set(player_xml.profile.stats.distance_moved as f64),
+                    shots_fired: ActiveValue::Set(player_xml.profile.stats.shots_fired),
+                    throwables_thrown: ActiveValue::Set(player_xml.profile.stats.throwables_thrown),
+                    rank_progression: ActiveValue::Set(player_xml.profile.stats.rank_progression as f64)
+                }
 }
 
 pub fn make_account_xml(player: &Arc<PlayerModel>, account: &Arc<AccountModel>) -> String {

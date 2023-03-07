@@ -12,7 +12,7 @@ use super::errors::ProfileServerError;
 use super::validation::{ValidatedQuery, ValidatedXmlBody};
 use super::xml::SetProfileDataXml;
 
-use super::util::{check_realm_is_configured, get_realm, get_player};
+use super::util::{check_realm_is_configured, get_realm, get_player, make_account_model};
 use super::util::ACCOUNT_COLUMNS;
 use super::params::SetProfileParams;
 
@@ -51,33 +51,7 @@ pub async fn rwr1_set_profile_handler(
             Some(player) => {
                 tracing::debug!("creating account model for player '{}' from xml...", &player.username);
                 // construct account active model from player xml
-                let account = AccountActiveModel {
-                    realm_id: ActiveValue::Set(realm.id),
-                    hash: ActiveValue::Set(player_xml.hash),
-                    game_version: ActiveValue::Set(player_xml.profile.game_version),
-                    squad_tag: ActiveValue::Set(player_xml.profile.squad_tag.to_owned()),
-                    max_authority_reached: ActiveValue::Set(player_xml.person.max_authority_reached as f64),
-                    authority: ActiveValue::Set(player_xml.person.authority as f64),
-                    job_points: ActiveValue::Set(player_xml.person.job_points as f64),
-                    faction: ActiveValue::Set(player_xml.person.faction),
-                    name: ActiveValue::Set(player_xml.person.name.to_owned()),
-                    soldier_group_id: ActiveValue::Set(player_xml.person.soldier_group_id),
-                    soldier_group_name: ActiveValue::Set(player_xml.person.soldier_group_name.to_owned()),
-                    squad_size_setting: ActiveValue::Set(player_xml.person.squad_size_setting),
-                    kills: ActiveValue::Set(player_xml.profile.stats.kills),
-                    deaths: ActiveValue::Set(player_xml.profile.stats.deaths),
-                    time_played: ActiveValue::Set(player_xml.profile.stats.time_played as i32),
-                    player_kills: ActiveValue::Set(player_xml.profile.stats.player_kills),
-                    teamkills: ActiveValue::Set(player_xml.profile.stats.teamkills),
-                    longest_kill_streak: ActiveValue::Set(player_xml.profile.stats.longest_kill_streak),
-                    targets_destroyed: ActiveValue::Set(player_xml.profile.stats.targets_destroyed),
-                    vehicles_destroyed: ActiveValue::Set(player_xml.profile.stats.vehicles_destroyed),
-                    soldiers_healed: ActiveValue::Set(player_xml.profile.stats.soldiers_healed),
-                    distance_moved: ActiveValue::Set(player_xml.profile.stats.distance_moved as f64),
-                    shots_fired: ActiveValue::Set(player_xml.profile.stats.shots_fired),
-                    throwables_thrown: ActiveValue::Set(player_xml.profile.stats.throwables_thrown),
-                    rank_progression: ActiveValue::Set(player_xml.profile.stats.rank_progression as f64)
-                };
+                let account = make_account_model(realm.id, player_xml);
                 // add account to vec of accounts to update in bulk insert many
                 accounts_to_update.push(account);
             }

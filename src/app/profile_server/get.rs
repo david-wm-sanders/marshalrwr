@@ -57,7 +57,7 @@ pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQu
                     // found account for player in realm
                     tracing::info!("found account for player '{}' in realm '{}'", player.username, realm.name);
                     let account_xml = make_account_xml(&player, &account)?; 
-                    // tracing::debug!("{account_xml:#?}");
+                    tracing::debug!("{account_xml}");
                     tracing::info!("sending person-profile for '{}' in '{}' to game server", player.username, realm.name);
                     Ok((StatusCode::OK, HEADERS, account_xml).into_response())
                 }

@@ -222,7 +222,7 @@ pub fn make_init_profile_xml(username: &str, rid: &str) -> Result<String, Profil
     profile_element.push_attribute(("rid", rid));
     init_xml_writer.write_event(Event::Empty(profile_element))?;
     init_xml_writer.write_event(Event::End(data_element_end))?;
-    let mut result = String::from_utf8(init_xml_writer.into_inner().into_inner()).unwrap();
+    let mut result = String::from_utf8(init_xml_writer.into_inner().into_inner())?;
     // append a newline to the end of the XML otherwise the rwr game server XML parser won't be happy :D
     result.push_str("\n");
     Ok(result)
@@ -258,11 +258,11 @@ pub fn make_account_model(realm_id: i32, player_xml: &PlayerXml) -> AccountActiv
                 }
 }
 
-pub fn make_account_xml(player: &Arc<PlayerModel>, account: &Arc<AccountModel>) -> String {
+pub fn make_account_xml(player: &Arc<PlayerModel>, account: &Arc<AccountModel>) -> Result<String, ProfileServerError> {
     // todo: make return Result and improve error handling
     let data = GetProfileDataXml::new(player, account);
-    let serializer = QuickXmlSerializer::with_root(String::new(), Some("data")).unwrap();
-    let mut xml = data.serialize(serializer).unwrap();
+    let serializer = QuickXmlSerializer::with_root(String::new(), Some("data"))?;
+    let mut xml = data.serialize(serializer)?;
     xml.push_str("\n");
-    xml
+    Ok(xml)
 }

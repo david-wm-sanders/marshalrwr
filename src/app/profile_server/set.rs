@@ -58,6 +58,7 @@ pub async fn rwr1_set_profile_handler(
     // update accounts models in cache
     tracing::debug!("inserting/updating accounts in cache...");
     for account in accounts_to_update.iter() {
+        // this unwrap should be "safe" as the account was just made^
         let account_model: AccountModel = account.clone().try_into().unwrap();
         let hash = account_model.hash;
         let arc_model = Arc::new(account_model);

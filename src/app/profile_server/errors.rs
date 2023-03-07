@@ -27,7 +27,7 @@ pub enum ProfileServerError {
     RealmNotConfigured(String),
     #[error("realm '{0}' digest '{1}' incorrect")]
     RealmDigestIncorrect(String, String),
-    #[error("player '{1}' [hash:{0}] sid {2} != {3}")]
+    #[error("player '{1}' [hash:{0}] sid {2} mismatch")]
     PlayerSidMismatch(i64, String, i64, i64),
     #[error("player '{1}' [hash:{0}, sid:{2}] rid '{3}' incorrect")]
     PlayerRidIncorrect(i64, String, i64, String),
@@ -48,14 +48,10 @@ impl ProfileServerError {
             ProfileServerError::SeaOrmDbError(err) => err.to_string(),
             ProfileServerError::QuickXmlError(err) => err.to_string(),
             ProfileServerError::QuickXmlDeserializationFailed(err) => err.to_string(),
-            ProfileServerError::RealmNotConfigured(realm_name) =>
-                format!("realm '{realm_name}' not configured"),
-            ProfileServerError::RealmDigestIncorrect(realm_name, realm_digest) =>
-                format!("realm '{realm_name}' digest '{realm_digest}' incorrect"),
-            ProfileServerError::PlayerSidMismatch(hash, username, given_sid, _expected_sid) =>
-                format!("player '{username}' [{hash}] sid '{given_sid}' does not match existing sid"),
-            ProfileServerError::PlayerRidIncorrect(hash, username, _sid, given_rid) =>
-                format!("player '{username}' [{hash}] rid '{given_rid}' incorrect"),
+            ProfileServerError::RealmNotConfigured(_) => self.to_string(),
+            ProfileServerError::RealmDigestIncorrect(_, _) => self.to_string(),
+            ProfileServerError::PlayerSidMismatch(_, _, _, _) => self.to_string(),
+            ProfileServerError::PlayerRidIncorrect(_, _, _, _) => self.to_string(),
             ProfileServerError::PlayerNotFound(_, _, _) => self.to_string(),
         };
         // escape the issue :D

@@ -20,13 +20,14 @@ thiserror = "1.0.38"
 validator = { version = "0.16.0", features = ["derive", "unic"] }
 lazy_static = "1.4.0"
 regex = "1.7.1"
-sea-orm = { version = "0.11.0", features = ["sqlx-sqlite", "runtime-tokio-rustls", "macros"] }
+sea-orm = { version = "0.11.0", features = ["sqlx-sqlite", "runtime-tokio-rustls", "macros", "debug-print", "with-json"] }
 anyhow = "1.0.69"
 figment = { version = "0.10.8", features = ["toml", "env"] }
 subtle = "2.4.1"
 moka = { version = "0.10.0", features = ["future"] }
 quick-xml = { version = "0.27.1", features = ["serialize", "async-tokio"] }
 percent-encoding = "2.2.0"
+serde_json = "1.0.94"
 
 migration = { path = "./src/migration" }
 entity = { path = "./src/entity" }

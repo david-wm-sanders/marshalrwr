@@ -7,6 +7,7 @@ use serde::Serialize;
 use subtle::ConstantTimeEq;
 use quick_xml::{events::{Event, BytesStart, BytesEnd}, writer::Writer, escape::{escape, unescape}};
 use quick_xml::se::Serializer as QuickXmlSerializer;
+use axum::http::header::{self, HeaderName};
 
 use super::errors::ProfileServerError;
 use super::params::GetProfileParams;
@@ -16,6 +17,7 @@ use entity::{Realm, RealmModel, RealmActiveModel, RealmColumn};
 use entity::{Player, PlayerModel, PlayerActiveModel, PlayerColumn};
 use entity::{Account, AccountModel, AccountActiveModel, AccountColumn};
 
+pub const HEADERS: [(HeaderName, &str); 1] = [(header::CONTENT_TYPE, "text/xml")];
 pub const ACCOUNT_COLUMNS: [AccountColumn; 25] = [AccountColumn::RealmId, AccountColumn::Hash, AccountColumn::GameVersion, AccountColumn::SquadTag,
                                                   AccountColumn::MaxAuthorityReached, AccountColumn::Authority, AccountColumn::JobPoints, AccountColumn::Faction,
                                                   AccountColumn::Name, AccountColumn::SoldierGroupId, AccountColumn::SoldierGroupName, AccountColumn::SquadSizeSetting,
@@ -114,11 +116,6 @@ pub async fn get_realm(state: &AppState, realm_name: &str, realm_digest: &str) -
         }
     }
 }
-
-// pub async fn get_player_from_db_by_name(db_conn: &DatabaseConnection, username: &str) -> Result<Option<()>, DbErr> {
-//     todo!();
-//     Ok(None)
-// }
 
 pub async fn get_player_from_db(db_conn: &DatabaseConnection, player_hash: i64) -> Result<Option<PlayerModel>, DbErr> {
     // get player by i64 hash id

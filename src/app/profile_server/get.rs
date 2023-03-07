@@ -10,13 +10,12 @@ use super::util::{check_realm_is_configured,
                   get_realm, get_player, get_account,
                   enlist_player, make_init_profile_xml,
                   make_account_xml};
+use super::util::HEADERS;
 
 use super::params::GetProfileParams;
 
 #[debug_handler]
 pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQuery(params): ValidatedQuery<GetProfileParams>) -> Result<Response, ProfileServerError> {
-    let headers  = [(header::CONTENT_TYPE, "text/xml")];
-
     // check that the realm has been configured, see fn comments for more detail
     check_realm_is_configured(&state, &params.realm)?;
 
@@ -37,10 +36,10 @@ pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQu
             let init_profile_xml = make_init_profile_xml(&player.username, &player.rid)?;
             tracing::info!("sending init profile for '{}' in '{}' to game server", &player.username, &realm.name);
             // return xml response
-            Ok((StatusCode::OK, headers, init_profile_xml).into_response())
+            Ok((StatusCode::OK, HEADERS, init_profile_xml).into_response())
         },
         Some(player) => {
-            tracing::debug!("found papers for player '{}'", &player.username);
+            tracing::info!("found papers for player '{}'", &player.username);
             // we have a player, try to retrieve an account for this player
             let opt_account = get_account(&state, &realm, &player).await?;
             match opt_account {
@@ -52,15 +51,15 @@ pub async fn rwr1_get_profile_handler(State(state): State<AppState>, ValidatedQu
                     let init_profile_xml = make_init_profile_xml(&player.username, &player.rid)?;
                     tracing::info!("sending init profile for '{}' in '{}' to game server", player.username, realm.name);
                     // return xml response
-                    Ok((StatusCode::OK, headers, init_profile_xml).into_response())
+                    Ok((StatusCode::OK, HEADERS, init_profile_xml).into_response())
                 },
                 Some(account) => {
                     // found account for player in realm
-                    tracing::debug!("found account for player '{}' in realm '{}'", player.username, realm.name);
+                    tracing::info!("found account for player '{}' in realm '{}'", player.username, realm.name);
                     let account_xml = make_account_xml(&player, &account); 
-                    tracing::debug!("{account_xml:#?}");
-                    tracing::debug!("sending person-profile for '{}' in '{}' to game server", player.username, realm.name);
-                    Ok((StatusCode::OK, headers, account_xml).into_response())
+                    // tracing::debug!("{account_xml:#?}");
+                    tracing::info!("sending person-profile for '{}' in '{}' to game server", player.username, realm.name);
+                    Ok((StatusCode::OK, HEADERS, account_xml).into_response())
                 }
             }
         }

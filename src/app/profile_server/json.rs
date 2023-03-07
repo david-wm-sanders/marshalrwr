@@ -1,28 +1,53 @@
 use serde::{Deserialize, Serialize};
 
+use super::xml::EquippedItemXml;
+
 #[derive(Serialize, Deserialize)]
-struct Loadout {
-    slots: Vec<EquippedItem>,
+pub struct Loadout {
+    pub slots: Vec<EquippedItem>,
+}
+
+impl Loadout {
+    pub fn new(equipped_items: &Vec<EquippedItemXml>) -> Self {
+        Self { slots: equipped_items.iter()
+                                    .map(|i| {
+                                        EquippedItem::new(i)
+                                    })
+                                    .collect()
+             }
+    }
 }
 
 #[derive(Serialize, Deserialize)]
-struct EquippedItem {
+pub struct EquippedItem {
     #[serde(rename = "s")]
-    slot: u8,
+    pub slot: u8,
     #[serde(rename = "i")]
-    index: i32,
+    pub index: i32,
     #[serde(rename = "k")]
-    key: String,
+    pub key: String,
     #[serde(rename = "a")]
-    amount: u8
+    pub amount: u16
+}
+
+impl EquippedItem {
+    pub fn new(item: &EquippedItemXml) -> Self {
+        Self {
+            slot: item.slot,
+            index: item.index, key: item.key.to_owned(),
+            amount: item.amount
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize)]
-struct StoredItem {
+pub struct StoredItem {
     #[serde(rename = "c")]
-    class: u8,
+    pub class: u8,
     #[serde(rename = "i")]
-    index: i32,
+    pub index: i32,
     #[serde(rename = "k")]
-    key: String
+    pub key: String,
+    #[serde(rename = "a")]
+    pub amount: u16
 }

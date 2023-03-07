@@ -13,6 +13,7 @@ use super::errors::ProfileServerError;
 use super::params::GetProfileParams;
 use super::super::state::AppState;
 use super::xml::{GetProfileDataXml, PlayerXml};
+use super::json::{EquippedItem, Loadout};
 use entity::{Realm, RealmModel, RealmActiveModel, RealmColumn};
 use entity::{Player, PlayerModel, PlayerActiveModel, PlayerColumn};
 use entity::{Account, AccountModel, AccountActiveModel, AccountColumn};
@@ -228,8 +229,10 @@ pub fn make_init_profile_xml(username: &str, rid: &str) -> Result<String, Profil
     Ok(result)
 }
 
-pub fn make_account_model(realm_id: i32, player_xml: &PlayerXml) -> AccountActiveModel {
-    AccountActiveModel {
+pub fn make_account_model(realm_id: i32, player_xml: &PlayerXml) -> Result<AccountActiveModel, ProfileServerError> {
+    let loadout = Loadout::new(&player_xml.person.equipped_items);
+    let loadout_json = serde_json::to_string(&loadout)?;
+    let account_model = AccountActiveModel {
                     realm_id: ActiveValue::Set(realm_id),
                     hash: ActiveValue::Set(player_xml.hash),
                     game_version: ActiveValue::Set(player_xml.profile.game_version),
@@ -242,6 +245,7 @@ pub fn make_account_model(realm_id: i32, player_xml: &PlayerXml) -> AccountActiv
                     soldier_group_id: ActiveValue::Set(player_xml.person.soldier_group_id),
                     soldier_group_name: ActiveValue::Set(player_xml.person.soldier_group_name.to_owned()),
                     squad_size_setting: ActiveValue::Set(player_xml.person.squad_size_setting),
+                    loadout: ActiveValue::Set(loadout_json),
                     kills: ActiveValue::Set(player_xml.profile.stats.kills),
                     deaths: ActiveValue::Set(player_xml.profile.stats.deaths),
                     time_played: ActiveValue::Set(player_xml.profile.stats.time_played as i32),
@@ -255,7 +259,8 @@ pub fn make_account_model(realm_id: i32, player_xml: &PlayerXml) -> AccountActiv
                     shots_fired: ActiveValue::Set(player_xml.profile.stats.shots_fired),
                     throwables_thrown: ActiveValue::Set(player_xml.profile.stats.throwables_thrown),
                     rank_progression: ActiveValue::Set(player_xml.profile.stats.rank_progression as f64)
-                }
+    };
+    Ok(account_model)
 }
 
 pub fn make_account_xml(player: &Arc<PlayerModel>, account: &Arc<AccountModel>) -> Result<String, ProfileServerError> {

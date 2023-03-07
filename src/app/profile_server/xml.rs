@@ -56,11 +56,11 @@ pub struct PersonXml {
 #[derive(Debug, Serialize, Deserialize, Validate)]
 pub struct EquippedItemXml {
     #[serde(rename = "@slot")]
-    pub slot: i32,
+    pub slot: u8,
     #[serde(rename = "@index")]
     pub index: i32,
     #[serde(rename = "@amount")]
-    pub amount: i32,
+    pub amount: u16,
     #[serde(rename = "@key")]
     pub key: String,
 }

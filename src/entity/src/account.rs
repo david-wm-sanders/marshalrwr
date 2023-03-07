@@ -22,6 +22,7 @@ pub struct Model {
     pub soldier_group_id: i32,
     pub soldier_group_name: String,
     pub squad_size_setting: i32,
+    pub loadout: String,
     pub kills: i32,
     pub deaths: i32,
     pub time_played: i32,

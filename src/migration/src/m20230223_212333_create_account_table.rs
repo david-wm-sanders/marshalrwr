@@ -25,6 +25,7 @@ enum Account {
     SquadSizeSetting,
     // how best to store loadout (varvaytya style?), backpack and stash?
     // todo!
+    Loadout,
     Kills,
     Deaths,
     TimePlayed,
@@ -66,6 +67,7 @@ impl MigrationTrait for Migration {
                 .col(ColumnDef::new(Account::SquadSizeSetting).integer().not_null())
                 // rip squad config index
                 // todo: add loadout, backpack, stash
+                .col(ColumnDef::new(Account::Loadout).json().not_null())
                 .col(ColumnDef::new(Account::Kills).integer().not_null())
                 .col(ColumnDef::new(Account::Deaths).integer().not_null())
                 .col(ColumnDef::new(Account::TimePlayed).integer().not_null())

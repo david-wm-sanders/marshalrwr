@@ -48,7 +48,7 @@ pub async fn rwr1_set_profile_handler(
             Some(player) => {
                 tracing::info!("creating account model for player '{}' from xml...", &player.username);
                 // construct account active model from player xml
-                let account = make_account_model(realm.id, player_xml);
+                let account = make_account_model(realm.id, player_xml)?;
                 // add account to vec of accounts to update in bulk insert many
                 accounts_to_update.push(account);
             }

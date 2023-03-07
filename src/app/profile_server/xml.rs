@@ -48,9 +48,12 @@ pub struct PersonXml {
     pub soldier_group_name: String,
     #[serde(rename = "@squad_size_setting")]
     pub squad_size_setting: i32,
-    // todo: add loadout, stash, and backpack
     #[serde(rename = "item")]
     pub equipped_items: Vec<EquippedItemXml>,
+    #[serde(rename = "backpack")]
+    pub backpack: ItemStoreXml,
+    #[serde(rename = "stash")]
+    pub stash: ItemStoreXml, 
 }
 
 #[derive(Debug, Serialize, Deserialize, Validate)]
@@ -63,6 +66,34 @@ pub struct EquippedItemXml {
     pub amount: u16,
     #[serde(rename = "@key")]
     pub key: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Validate)]
+pub struct ItemStoreXml {
+    #[serde(rename = "item_group")]
+    #[serde(default)]
+    pub items: Vec<StoredItemXml>,
+}
+
+impl ItemStoreXml {
+    pub fn new() -> Self {
+        Self {
+            // todo implement
+            items: vec![]
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Validate)]
+pub struct StoredItemXml {
+    #[serde(rename = "@class")]
+    pub class: u8,
+    #[serde(rename = "@index")]
+    pub index: i32,
+    #[serde(rename = "@key")]
+    pub key: String,
+    #[serde(rename = "@amount")]
+    pub amount: u16,
 }
 
 #[derive(Debug, Serialize, Deserialize, Validate)]
@@ -142,6 +173,8 @@ impl GetProfileDataXml {
                 squad_size_setting: account.squad_size_setting,
                 // todo: populate this vec from the account loadout
                 equipped_items: vec![],
+                backpack: ItemStoreXml::new(),
+                stash: ItemStoreXml::new(),
             },
             profile: ProfileXml {
                 game_version: account.game_version,

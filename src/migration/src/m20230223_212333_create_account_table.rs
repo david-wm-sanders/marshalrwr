@@ -23,9 +23,9 @@ enum Account {
     SoldierGroupId,
     SoldierGroupName,
     SquadSizeSetting,
-    // how best to store loadout (varvaytya style?), backpack and stash?
-    // todo!
     Loadout,
+    Backpack,
+    Stash,
     Kills,
     Deaths,
     TimePlayed,
@@ -66,8 +66,10 @@ impl MigrationTrait for Migration {
                 .col(ColumnDef::new(Account::SoldierGroupName).string_len(32).not_null())
                 .col(ColumnDef::new(Account::SquadSizeSetting).integer().not_null())
                 // rip squad config index
-                // todo: add loadout, backpack, stash
                 .col(ColumnDef::new(Account::Loadout).json().not_null())
+                .col(ColumnDef::new(Account::Backpack).json().not_null())
+                .col(ColumnDef::new(Account::Stash).json().not_null())
+                // stats
                 .col(ColumnDef::new(Account::Kills).integer().not_null())
                 .col(ColumnDef::new(Account::Deaths).integer().not_null())
                 .col(ColumnDef::new(Account::TimePlayed).integer().not_null())
@@ -82,6 +84,7 @@ impl MigrationTrait for Migration {
                 .col(ColumnDef::new(Account::ShotsFired).integer().not_null())
                 .col(ColumnDef::new(Account::ThrowablesThrown).integer().not_null())
                 .col(ColumnDef::new(Account::RankProgression).float().not_null())
+                // todo: monitors!
                 // setup composite primary key
                 .primary_key(Index::create().col(Account::RealmId).col(Account::Hash))
                 // add foreign keys

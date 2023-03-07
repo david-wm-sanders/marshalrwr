@@ -13,15 +13,16 @@ use super::errors::ProfileServerError;
 use super::params::GetProfileParams;
 use super::super::state::AppState;
 use super::xml::{GetProfileDataXml, PlayerXml};
-use super::json::{EquippedItem, Loadout};
+use super::json::{EquippedItem, Loadout, ItemStore};
 use entity::{Realm, RealmModel, RealmActiveModel, RealmColumn};
 use entity::{Player, PlayerModel, PlayerActiveModel, PlayerColumn};
 use entity::{Account, AccountModel, AccountActiveModel, AccountColumn};
 
 pub const HEADERS: [(HeaderName, &str); 1] = [(header::CONTENT_TYPE, "text/xml")];
-pub const ACCOUNT_COLUMNS: [AccountColumn; 25] = [AccountColumn::RealmId, AccountColumn::Hash, AccountColumn::GameVersion, AccountColumn::SquadTag,
+pub const ACCOUNT_COLUMNS: [AccountColumn; 28] = [AccountColumn::RealmId, AccountColumn::Hash, AccountColumn::GameVersion, AccountColumn::SquadTag,
                                                   AccountColumn::MaxAuthorityReached, AccountColumn::Authority, AccountColumn::JobPoints, AccountColumn::Faction,
                                                   AccountColumn::Name, AccountColumn::SoldierGroupId, AccountColumn::SoldierGroupName, AccountColumn::SquadSizeSetting,
+                                                  AccountColumn::Loadout, AccountColumn::Backpack, AccountColumn::Stash,
                                                   AccountColumn::Kills, AccountColumn::Deaths, AccountColumn::TimePlayed,
                                                   AccountColumn::PlayerKills, AccountColumn::Teamkills, AccountColumn::LongestKillStreak,
                                                   AccountColumn::TargetsDestroyed, AccountColumn::VehiclesDestroyed, AccountColumn::SoldiersHealed,
@@ -232,6 +233,10 @@ pub fn make_init_profile_xml(username: &str, rid: &str) -> Result<String, Profil
 pub fn make_account_model(realm_id: i32, player_xml: &PlayerXml) -> Result<AccountActiveModel, ProfileServerError> {
     let loadout = Loadout::new(&player_xml.person.equipped_items);
     let loadout_json = serde_json::to_string(&loadout)?;
+    let backpack_store = ItemStore::new(&player_xml.person.backpack.items);
+    let backpack_json = serde_json::to_string(&backpack_store)?;
+    let stash_store = ItemStore::new(&player_xml.person.stash.items);
+    let stash_json = serde_json::to_string(&stash_store)?;
     let account_model = AccountActiveModel {
                     realm_id: ActiveValue::Set(realm_id),
                     hash: ActiveValue::Set(player_xml.hash),
@@ -246,6 +251,8 @@ pub fn make_account_model(realm_id: i32, player_xml: &PlayerXml) -> Result<Accou
                     soldier_group_name: ActiveValue::Set(player_xml.person.soldier_group_name.to_owned()),
                     squad_size_setting: ActiveValue::Set(player_xml.person.squad_size_setting),
                     loadout: ActiveValue::Set(loadout_json),
+                    backpack: ActiveValue::Set(backpack_json),
+                    stash: ActiveValue::Set(stash_json),
                     kills: ActiveValue::Set(player_xml.profile.stats.kills),
                     deaths: ActiveValue::Set(player_xml.profile.stats.deaths),
                     time_played: ActiveValue::Set(player_xml.profile.stats.time_played as i32),

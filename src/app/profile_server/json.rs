@@ -1,6 +1,8 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 
-use super::xml::EquippedItemXml;
+use super::xml::{EquippedItemXml, StoredItemXml};
 
 #[derive(Serialize, Deserialize)]
 pub struct Loadout {
@@ -36,6 +38,27 @@ impl EquippedItem {
             slot: item.slot,
             index: item.index, key: item.key.to_owned(),
             amount: item.amount
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct ItemStore {
+    pub items: Vec<StoredItem>,
+}
+
+impl ItemStore {
+    pub fn new(stored_items: &Vec<StoredItemXml>) -> Self {
+        let v: Vec<StoredItem> = stored_items.iter()
+            .map(|item| {
+                StoredItem {
+                    class: item.class,
+                    index: item.index, key: item.key.to_owned(),
+                    amount: item.amount
+                }
+            }).collect();
+        Self {
+            items: v,
         }
     }
 }

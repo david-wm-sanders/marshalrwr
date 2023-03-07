@@ -3,7 +3,7 @@ use std::sync::Arc;
 use serde::{Serialize, Deserialize};
 use validator::Validate;
 
-use super::validation::{validate_username, RE_HEX_STR};
+use super::{validation::{validate_username, RE_HEX_STR}, errors::ProfileServerError, json::{Loadout, ItemStore}};
 use entity::{PlayerModel, AccountModel};
 
 // todo: validate that hash for player username
@@ -50,9 +50,9 @@ pub struct PersonXml {
     pub squad_size_setting: i32,
     #[serde(rename = "item")]
     pub equipped_items: Vec<EquippedItemXml>,
-    #[serde(rename = "backpack")]
+    // #[serde(rename = "backpack")]
     pub backpack: ItemStoreXml,
-    #[serde(rename = "stash")]
+    // #[serde(rename = "stash")]
     pub stash: ItemStoreXml, 
 }
 
@@ -76,10 +76,15 @@ pub struct ItemStoreXml {
 }
 
 impl ItemStoreXml {
-    pub fn new() -> Self {
+    pub fn new(item_store: &ItemStore) -> Self {
         Self {
-            // todo implement
-            items: vec![]
+            items: item_store.items.iter().map(|item| {
+                StoredItemXml {
+                    class: item.class,
+                    index: item.index, key: item.key.to_owned(),
+                    amount: item.amount
+                }
+            }).collect()
         }
     }
 }
@@ -159,8 +164,11 @@ pub struct GetProfileDataXml {
 
 
 impl GetProfileDataXml {
-    pub fn new(player: &Arc<PlayerModel>, account: &Arc<AccountModel>) -> Self {
-        Self {
+    pub fn new(player: &Arc<PlayerModel>, account: &Arc<AccountModel>) -> Result<Self, ProfileServerError> {
+        let loadout_json: Loadout = serde_json::from_str(&account.loadout)?;
+        let backpack_json: ItemStore = serde_json::from_str(&account.backpack)?;
+        let stash_json: ItemStore = serde_json::from_str(&account.stash)?;
+        Ok(Self {
             ok: 1,
             person: PersonXml {
                 max_authority_reached: account.max_authority_reached as f32,
@@ -171,10 +179,15 @@ impl GetProfileDataXml {
                 soldier_group_id: account.soldier_group_id,
                 soldier_group_name: account.soldier_group_name.clone(),
                 squad_size_setting: account.squad_size_setting,
-                // todo: populate this vec from the account loadout
-                equipped_items: vec![],
-                backpack: ItemStoreXml::new(),
-                stash: ItemStoreXml::new(),
+                equipped_items: loadout_json.slots.iter().map(|item| {
+                    EquippedItemXml {
+                        slot: item.slot,
+                        index: item.index, key: item.key.to_owned(),
+                        amount: item.amount
+                    }
+                }).collect(),
+                backpack: ItemStoreXml::new(&backpack_json),
+                stash: ItemStoreXml::new(&stash_json),
             },
             profile: ProfileXml {
                 game_version: account.game_version,
@@ -198,6 +211,6 @@ impl GetProfileDataXml {
                     rank_progression: account.rank_progression as f32,
                 }
             },
-        }
+        })
     }
 }

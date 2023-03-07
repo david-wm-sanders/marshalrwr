@@ -271,8 +271,7 @@ pub fn make_account_model(realm_id: i32, player_xml: &PlayerXml) -> Result<Accou
 }
 
 pub fn make_account_xml(player: &Arc<PlayerModel>, account: &Arc<AccountModel>) -> Result<String, ProfileServerError> {
-    // todo: make return Result and improve error handling
-    let data = GetProfileDataXml::new(player, account);
+    let data = GetProfileDataXml::new(player, account)?;
     let serializer = QuickXmlSerializer::with_root(String::new(), Some("data"))?;
     let mut xml = data.serialize(serializer)?;
     xml.push_str("\n");

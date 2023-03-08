@@ -52,9 +52,7 @@ pub struct PersonXml {
     pub squad_size_setting: i32,
     #[serde(rename = "item")]
     pub equipped_items: Vec<EquippedItemXml>,
-    // #[serde(rename = "backpack")]
     pub backpack: ItemStoreXml,
-    // #[serde(rename = "stash")]
     pub stash: ItemStoreXml, 
 }
 

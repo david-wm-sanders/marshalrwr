@@ -76,7 +76,7 @@ pub fn check_realm_is_configured(state: &AppState, realm: &str) -> Result<(), Pr
     // this should be fine when the IP allowlist for the profile server endpoints is implemented
     if !state
         .config
-        .realms
+        .ps_realms
         .iter()
         .any(|realm_name| realm_name == realm)
     {

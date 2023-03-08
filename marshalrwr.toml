@@ -1,2 +1,2 @@
-realms = ["INCURSION"]
+ps_realms = ["INCURSION"]
 # ps_allowed_ips = ["10.0.0.1", "10.0.0.2"]

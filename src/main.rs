@@ -26,14 +26,14 @@ use migration::{Migrator, MigratorTrait};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AppConfiguration {
-    realms: Vec<String>,
+    ps_realms: Vec<String>,
     ps_allowed_ips: Vec<IpAddr>,
 }
 
 impl Default for AppConfiguration {
     fn default() -> Self {
         AppConfiguration {
-            realms: vec![],
+            ps_realms: vec![],
             ps_allowed_ips: vec![IpAddr::from_str("127.0.0.1").unwrap()],
         }
     }

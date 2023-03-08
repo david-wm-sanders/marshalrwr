@@ -42,6 +42,8 @@ pub struct PersonXml {
     pub faction: i32,
     #[serde(rename = "@name")]
     pub name: String,
+    #[serde(rename = "@version")]
+    pub version: i32, /* version must be provided for items and item_groups to be handled properly */
     #[serde(rename = "@soldier_group_id")]
     pub soldier_group_id: i32,
     #[serde(rename = "@soldier_group_name")]
@@ -176,6 +178,7 @@ impl GetProfileDataXml {
                 job_points: account.job_points as f32,
                 faction: account.faction,
                 name: account.name.clone(),
+                version: account.game_version,
                 soldier_group_id: account.soldier_group_id,
                 soldier_group_name: account.soldier_group_name.clone(),
                 squad_size_setting: account.squad_size_setting,

@@ -6,7 +6,7 @@ use std::string::FromUtf8Error;
 use thiserror::Error;
 use axum::extract::rejection::{QueryRejection, BytesRejection};
 use axum::response::{IntoResponse, Response};
-use axum::http::{StatusCode, header};
+use axum::http::StatusCode;
 use validator::ValidationErrors;
 use sea_orm::error::DbErr;
 use quick_xml::Error as QXmlError;

@@ -42,7 +42,7 @@ impl Default for CacheManager {
                     .max_capacity(256)
                     .time_to_live(Duration::from_secs(30*60))
                     .time_to_idle(Duration::from_secs(15*60))
-                    .eviction_listener_with_queued_delivery_mode(|key, value: Arc<PlayerModel>, removal_cause| {
+                    .eviction_listener_with_queued_delivery_mode(|_key, value: Arc<PlayerModel>, removal_cause| {
                         match removal_cause {
                             moka::notification::RemovalCause::Expired =>
                                 tracing::debug!("player '{}' [hash:{}, sid:{}] expired and was evicted from the cache", value.username, value.hash, value.sid),
@@ -61,7 +61,7 @@ impl Default for CacheManager {
                     .max_capacity(256)
                     .time_to_live(Duration::from_secs(30*60))
                     .time_to_idle(Duration::from_secs(15*60))
-                    .eviction_listener_with_queued_delivery_mode(|key: Arc<(i32, i64)>, value: Arc<AccountModel>, removal_cause| {
+                    .eviction_listener_with_queued_delivery_mode(|key: Arc<(i32, i64)>, _value: Arc<AccountModel>, removal_cause| {
                         match removal_cause {
                             moka::notification::RemovalCause::Expired =>
                                 tracing::debug!("account '({}, {})' expired and was evicted from the cache", key.0, key.1),

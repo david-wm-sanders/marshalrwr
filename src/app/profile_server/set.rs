@@ -2,11 +2,11 @@ use std::sync::Arc;
 use std::net::SocketAddr;
 
 use axum::extract::{State, ConnectInfo};
-use axum::http::{header, StatusCode};
+use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum_macros::debug_handler;
 use migration::OnConflict;
-use sea_orm::{ActiveValue, EntityTrait};
+use sea_orm::EntityTrait;
 
 use super::super::state::AppState;
 use super::errors::ProfileServerError;

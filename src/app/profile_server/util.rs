@@ -1,4 +1,4 @@
-use std::net::{SocketAddr, IpAddr};
+use std::net::IpAddr;
 use std::sync::Arc;
 use std::io::Cursor;
 
@@ -6,7 +6,7 @@ use sea_orm::{DatabaseConnection, ActiveValue, ActiveModelTrait};
 use sea_orm::{EntityTrait, QueryFilter, ColumnTrait, error::DbErr};
 use serde::Serialize;
 use subtle::ConstantTimeEq;
-use quick_xml::{events::{Event, BytesStart, BytesEnd}, writer::Writer, escape::{escape, unescape}};
+use quick_xml::{events::{Event, BytesStart, BytesEnd}, writer::Writer, escape::escape};
 use quick_xml::se::Serializer as QuickXmlSerializer;
 use axum::http::header::{self, HeaderName};
 
@@ -14,9 +14,9 @@ use super::errors::ProfileServerError;
 use super::params::GetProfileParams;
 use super::super::state::AppState;
 use super::xml::{GetProfileDataXml, PlayerXml};
-use super::json::{EquippedItem, Loadout, ItemStore};
+use super::json::{Loadout, ItemStore};
 use entity::{Realm, RealmModel, RealmActiveModel, RealmColumn};
-use entity::{Player, PlayerModel, PlayerActiveModel, PlayerColumn};
+use entity::{Player, PlayerModel, PlayerActiveModel};
 use entity::{Account, AccountModel, AccountActiveModel, AccountColumn};
 
 pub const HEADERS: [(HeaderName, &str); 1] = [(header::CONTENT_TYPE, "text/xml")];
@@ -236,7 +236,7 @@ pub fn make_init_profile_xml(username: &str, rid: &str) -> Result<String, Profil
     init_xml_writer.write_event(Event::End(data_element_end))?;
     let mut result = String::from_utf8(init_xml_writer.into_inner().into_inner())?;
     // append a newline to the end of the XML otherwise the rwr game server XML parser won't be happy :D
-    result.push_str("\n");
+    result.push('\n');
     Ok(result)
 }
 
@@ -284,6 +284,6 @@ pub fn make_account_xml(player: &Arc<PlayerModel>, account: &Arc<AccountModel>) 
     let data = GetProfileDataXml::new(player, account)?;
     let serializer = QuickXmlSerializer::with_root(String::new(), Some("data"))?;
     let mut xml = data.serialize(serializer)?;
-    xml.push_str("\n");
+    xml.push('\n');
     Ok(xml)
 }

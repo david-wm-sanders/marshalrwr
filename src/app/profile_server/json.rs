@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use serde::{Deserialize, Serialize};
 
 use super::xml::{EquippedItemXml, StoredItemXml};
@@ -10,7 +8,7 @@ pub struct Loadout {
 }
 
 impl Loadout {
-    pub fn new(equipped_items: &Vec<EquippedItemXml>) -> Self {
+    pub fn new(equipped_items: &[EquippedItemXml]) -> Self {
         Self { slots: equipped_items.iter()
                                     .map(|i| {
                                         EquippedItem::new(i)
@@ -48,7 +46,7 @@ pub struct ItemStore {
 }
 
 impl ItemStore {
-    pub fn new(stored_items: &Vec<StoredItemXml>) -> Self {
+    pub fn new(stored_items: &[StoredItemXml]) -> Self {
         let v: Vec<StoredItem> = stored_items.iter()
             .map(|item| {
                 StoredItem {

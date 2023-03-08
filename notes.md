@@ -1,25 +1,11 @@
-2023-01-31T20:06:50.935900Z
-DEBUG
-request{method=GET 
-    uri=/get_profile.php?
-    hash=3365784589&
-    username=MARSHAL&
-    digest=&
-    rid=A76AF7BDD97A2E0F54D6934A8583EFF6916BA1F56E5F2FAC85EE5E447BCA02DD&
-    sid=53219938&
-    realm=INCURSION
-    &realm_digest=17E615D232B76E060567D3327F2D31758F9CCF8ACE0319E1AD49C626F766CA5B
-version=HTTP/1.1}: 
-tower_http::trace::on_request: started processing request
-
-# all params
+### all params
 hash=3365784589&username=MARSHAL&digest=&rid=A76AF7BDD97A2E0F54D6934A8583EFF6916BA1F56E5F2FAC85EE5E447BCA02DD&sid=53219938&realm=INCURSION&realm_digest=17E615D232B76E060567D3327F2D31758F9CCF8ACE0319E1AD49C626F766CA5B
 
-# seaorm cli commands for migration and entity generation with specific dirs
+### seaorm cli commands for migration and entity generation with specific dirs
 sea-orm-cli.exe migrate generate create_player_table -d .\src\migration\
 sea-orm-cli.exe generate entity -u "sqlite://classified.db" -o .\src\entity\src
 
-# varvaytya examples for better logging messages
+### varvaytya examples for better logging messages
 2023-02-22 03:10:07.609 | INFO     |�  [get] Validating request args...
 2023-02-22 03:10:07.610 | DEBUG    |�  [get] Locating realm 'INCURSION' and checking digest...
 2023-02-22 03:10:07.674 | INFO     |�  [get] Located realm 'INCURSION' (1) [world: valhalla]
@@ -38,9 +24,7 @@ sea-orm-cli.exe generate entity -u "sqlite://classified.db" -o .\src\entity\src
 2023-02-22 03:11:40.545 | DEBUG    |�  [get] Finding account (1, 3365784589)...
 2023-02-22 03:11:40.571 | DEBUG    |�  [get] Constructing xml for 'MARSHAL' in 'INCURSION' (1, 3365784589)...
 
-
-DEBUG request{method=POST uri=/set_profile.php?realm=INCURSION&realm_digest=17E615D232B76E060567D3327F2D31758F9CCF8ACE0319E1AD49C626F766CA5B}
-
+### xml examples
 ```xml
 <data>
     <player hash='193474582' digest='' rid='4D937F46A2FEB79B176AEED6C22D355D0AD57736A338C223F68704AE379CF0D9'>
@@ -67,7 +51,11 @@ DEBUG request{method=POST uri=/set_profile.php?realm=INCURSION&realm_digest=17E6
         <profile game_version="155" username="WTF" digest="" sid="53219938" rid="4D937F46A2FEB79B176AEED6C22D355D0AD57736A338C223F68704AE379CF0D9" squad_tag="" color="1 1 1 0">
             <stats kills="0" deaths="0" time_played="110.000000" player_kills="0" teamkills="0" longest_kill_streak="0" targets_destroyed="0" vehicles_destroyed="0" soldiers_healed="0"
                    times_got_healed="0" distance_moved="75.942490" shots_fired="0" throwables_thrown="0" rank_progression="0.000000">
-                <monitor name="kill combo" />
+                <monitor name="kill combo">
+                    <entry combo="3" count="4" />
+                    <entry combo="4" count="0" />
+                    <entry combo="5" count="1" />
+                </monitor>
                 <monitor name="death streak" longest_death_streak="0" />
                 <monitor /><monitor /><monitor />
                 <monitor name="destroyer" level="0">
@@ -82,7 +70,7 @@ DEBUG request{method=POST uri=/set_profile.php?realm=INCURSION&realm_digest=17E6
                     <criteria count="0" />
                 </monitor>
                 <monitor name="killer" level="0">
-                    <criteria count="0" />
+                    <criteria count="53" />
                 </monitor>
                 <monitor name="stealth" level="0">
                     <criteria count="0" />
@@ -101,8 +89,8 @@ DEBUG request{method=POST uri=/set_profile.php?realm=INCURSION&realm_digest=17E6
                 <monitor name="steam_deaths" level="0">
                     <criteria count="0" />
                 </monitor>
-                <monitor name="steam_miniboss_kill" level="0">
-                    <criteria count="0" />
+                <monitor name="steam_miniboss_kill" level="1">
+                    <criteria count="1" />
                 </monitor>
                 <monitor name="steam_green_campaign_complete" level="0">
                     <criteria count="0" />
@@ -129,10 +117,10 @@ DEBUG request{method=POST uri=/set_profile.php?realm=INCURSION&realm_digest=17E6
                     <criteria count="0" />
                 </monitor>
                 <monitor name="steam_blast_kills" level="0">
-                    <criteria count="0" />
+                    <criteria count="7" />
                 </monitor>
                 <monitor name="steam_shots_fired" level="0">
-                    <criteria count="0" />
+                    <criteria count="975" />
                 </monitor>
                 <monitor name="steam_antiair_destroyed" level="0">
                     <criteria count="0" />

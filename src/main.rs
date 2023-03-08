@@ -1,4 +1,4 @@
-use std::net::SocketAddr;
+use std::{net::{SocketAddr, IpAddr}, str::FromStr};
 
 use sea_orm::Database;
 use serde::{Serialize, Deserialize};
@@ -17,15 +17,17 @@ use migration::{Migrator, MigratorTrait};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AppConfiguration {
-    realms: Vec<String>
+    realms: Vec<String>,
+    ps_allowed_ips: Vec<IpAddr>,
 }
 
 impl Default for AppConfiguration {
     fn default() -> Self {
         AppConfiguration {
-            realms: vec![]   
+            realms: vec![],
+            ps_allowed_ips: vec![IpAddr::from_str("127.0.0.1").unwrap()]
         }
-    }   
+    }
 }
 
 #[tokio::main]
@@ -66,7 +68,7 @@ async fn main() -> anyhow::Result<()> {
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
     tracing::info!("listening on {}...", addr);
     axum::Server::bind(&addr)
-        .serve(application_router.into_make_service())
+        .serve(application_router.into_make_service_with_connect_info::<SocketAddr>())
         .with_graceful_shutdown(shutdown_signal())
         .await
         .unwrap();

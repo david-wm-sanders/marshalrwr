@@ -1,3 +1,4 @@
+use std::net::{SocketAddr, IpAddr};
 use std::sync::Arc;
 use std::io::Cursor;
 
@@ -27,6 +28,15 @@ pub const ACCOUNT_COLUMNS: [AccountColumn; 28] = [AccountColumn::RealmId, Accoun
                                                   AccountColumn::PlayerKills, AccountColumn::Teamkills, AccountColumn::LongestKillStreak,
                                                   AccountColumn::TargetsDestroyed, AccountColumn::VehiclesDestroyed, AccountColumn::SoldiersHealed,
                                                   AccountColumn::DistanceMoved, AccountColumn::ShotsFired, AccountColumn::ThrowablesThrown, AccountColumn::RankProgression];
+
+pub fn check_ip_allowlist(state: &AppState, ip: IpAddr) -> Result<(), ProfileServerError> {
+    if !state.config.ps_allowed_ips.iter().any(|allowed_ip| ip.eq(allowed_ip) ) {
+        // no address a in the allowed ips vec matches this address addr
+        tracing::error!("ip '{}' is not allowed to get/set profiles", ip);
+        return Err(ProfileServerError::ClientAddressNotAllowed(ip));
+    }
+    Ok(())
+}
 
 pub fn check_realm_is_configured(state: &AppState, realm: &str) -> Result<(), ProfileServerError> {
     // check that this realm is in state.config, this acts as a guard whilst the realm digest algo remains a mystery

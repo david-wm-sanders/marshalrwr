@@ -1,4 +1,5 @@
 use std::io::Cursor;
+use std::net::IpAddr;
 use std::str::Utf8Error;
 use std::string::FromUtf8Error;
 
@@ -33,6 +34,8 @@ pub enum ProfileServerError {
     FromUtf8Error(#[from] FromUtf8Error),
     #[error(transparent)]
     SerdeJsonError(#[from] serde_json::Error),
+    #[error("ip address '{0}' not allowed to get/set")]
+    ClientAddressNotAllowed(IpAddr),
     #[error("realm '{0}' is not configured")]
     RealmNotConfigured(String),
     #[error("realm '{0}' digest '{1}' incorrect")]
@@ -61,6 +64,7 @@ impl ProfileServerError {
             ProfileServerError::Utf8Error(err) => err.to_string(),
             ProfileServerError::FromUtf8Error(err) => err.to_string(),
             ProfileServerError::SerdeJsonError(err) => err.to_string(),
+            ProfileServerError::ClientAddressNotAllowed(_) => self.to_string(),
             ProfileServerError::RealmNotConfigured(_) => self.to_string(),
             ProfileServerError::RealmDigestIncorrect(_, _) => self.to_string(),
             ProfileServerError::PlayerSidMismatch(_, _, _, _) => self.to_string(),
@@ -93,6 +97,7 @@ impl IntoResponse for ProfileServerError {
             ProfileServerError::Utf8Error(_) => (StatusCode::INTERNAL_SERVER_ERROR, HEADERS, self.to_xml_string()),
             ProfileServerError::FromUtf8Error(_) => (StatusCode::INTERNAL_SERVER_ERROR, HEADERS, self.to_xml_string()),
             ProfileServerError::SerdeJsonError(_) => (StatusCode::INTERNAL_SERVER_ERROR, HEADERS, self.to_xml_string()),
+            ProfileServerError::ClientAddressNotAllowed(_) => (StatusCode::UNAUTHORIZED, HEADERS, self.to_xml_string()),
             ProfileServerError::RealmNotConfigured(_) => (StatusCode::BAD_REQUEST, HEADERS, self.to_xml_string()),
             ProfileServerError::RealmDigestIncorrect(_, _) => (StatusCode::UNAUTHORIZED, HEADERS, self.to_xml_string()),
             ProfileServerError::PlayerSidMismatch(_, _, _, _) => (StatusCode::UNAUTHORIZED, HEADERS, self.to_xml_string()),

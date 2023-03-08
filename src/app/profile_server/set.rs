@@ -1,6 +1,7 @@
 use std::sync::Arc;
+use std::net::SocketAddr;
 
-use axum::extract::State;
+use axum::extract::{State, ConnectInfo};
 use axum::http::{header, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum_macros::debug_handler;
@@ -12,7 +13,8 @@ use super::errors::ProfileServerError;
 use super::validation::{ValidatedQuery, ValidatedXmlBody};
 use super::xml::SetProfileDataXml;
 
-use super::util::{check_realm_is_configured, get_realm, get_player, make_account_model};
+use super::util::{check_ip_allowlist, check_realm_is_configured,
+                  get_realm, get_player, make_account_model};
 use super::util::{HEADERS, ACCOUNT_COLUMNS};
 use super::params::SetProfileParams;
 
@@ -20,10 +22,14 @@ use entity::{Account, AccountModel, AccountActiveModel, AccountColumn};
 
 #[debug_handler]
 pub async fn rwr1_set_profile_handler(
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     State(state): State<AppState>,
     ValidatedQuery(params): ValidatedQuery<SetProfileParams>,
     ValidatedXmlBody(data): ValidatedXmlBody<SetProfileDataXml>,
 ) -> Result<Response, ProfileServerError> {
+    // check that the client addr is an allowed ip
+    check_ip_allowlist(&state, addr.ip())?;
+
     // check that the realm has been configured, see fn comments for more detail
     check_realm_is_configured(&state, &params.realm)?;
 

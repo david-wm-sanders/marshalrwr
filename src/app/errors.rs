@@ -1,9 +1,9 @@
-use thiserror::Error;
 use axum::extract::rejection::QueryRejection;
-use axum::response::{IntoResponse, Response};
 use axum::http::StatusCode;
-use validator::ValidationErrors;
+use axum::response::{IntoResponse, Response};
 use sea_orm::error::DbErr;
+use thiserror::Error;
+use validator::ValidationErrors;
 
 #[derive(Debug, Error)]
 pub enum ServerError {

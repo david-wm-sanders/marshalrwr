@@ -1,11 +1,11 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use sea_orm::DatabaseConnection;
 use moka::future::Cache;
+use sea_orm::DatabaseConnection;
 
-use entity::{RealmModel, PlayerModel, AccountModel};
 use crate::AppConfiguration;
+use entity::{AccountModel, PlayerModel, RealmModel};
 
 #[derive(Clone)]
 pub struct CacheManager {
@@ -87,7 +87,11 @@ pub struct AppState {
 
 impl AppState {
     pub fn new(app_config: AppConfiguration, db_conn: DatabaseConnection) -> Self {
-        Self { config: app_config, db: db_conn, cache: CacheManager::default() }
+        Self {
+            config: app_config,
+            db: db_conn,
+            cache: CacheManager::default(),
+        }
     }
 }
 

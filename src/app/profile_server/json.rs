@@ -9,12 +9,12 @@ pub struct Loadout {
 
 impl Loadout {
     pub fn new(equipped_items: &[EquippedItemXml]) -> Self {
-        Self { slots: equipped_items.iter()
-                                    .map(|i| {
-                                        EquippedItem::new(i)
-                                    })
-                                    .collect()
-             }
+        Self {
+            slots: equipped_items
+                .iter()
+                .map(|i| EquippedItem::new(i))
+                .collect(),
+        }
     }
 }
 
@@ -27,15 +27,16 @@ pub struct EquippedItem {
     #[serde(rename = "k")]
     pub key: String,
     #[serde(rename = "a")]
-    pub amount: u16
+    pub amount: u16,
 }
 
 impl EquippedItem {
     pub fn new(item: &EquippedItemXml) -> Self {
         Self {
             slot: item.slot,
-            index: item.index, key: item.key.to_owned(),
-            amount: item.amount
+            index: item.index,
+            key: item.key.to_owned(),
+            amount: item.amount,
         }
     }
 }
@@ -47,17 +48,16 @@ pub struct ItemStore {
 
 impl ItemStore {
     pub fn new(stored_items: &[StoredItemXml]) -> Self {
-        let v: Vec<StoredItem> = stored_items.iter()
-            .map(|item| {
-                StoredItem {
-                    class: item.class,
-                    index: item.index, key: item.key.to_owned(),
-                    amount: item.amount
-                }
-            }).collect();
-        Self {
-            items: v,
-        }
+        let v: Vec<StoredItem> = stored_items
+            .iter()
+            .map(|item| StoredItem {
+                class: item.class,
+                index: item.index,
+                key: item.key.to_owned(),
+                amount: item.amount,
+            })
+            .collect();
+        Self { items: v }
     }
 }
 
@@ -70,5 +70,5 @@ pub struct StoredItem {
     #[serde(rename = "k")]
     pub key: String,
     #[serde(rename = "a")]
-    pub amount: u16
+    pub amount: u16,
 }

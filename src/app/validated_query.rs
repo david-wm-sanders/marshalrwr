@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use axum::extract::{Query, FromRequestParts, rejection::QueryRejection};
+use axum::extract::{rejection::QueryRejection, FromRequestParts, Query};
 use axum::http::request::Parts;
 use serde::de::DeserializeOwned;
 use validator::Validate;
@@ -14,7 +14,7 @@ impl<T, S> FromRequestParts<S> for ValidatedQuery<T>
 where
     T: DeserializeOwned + Validate,
     S: Send + Sync,
-    Query<T>: FromRequestParts<S, Rejection = QueryRejection>
+    Query<T>: FromRequestParts<S, Rejection = QueryRejection>,
 {
     type Rejection = ServerError;
 

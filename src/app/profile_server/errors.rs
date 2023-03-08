@@ -3,14 +3,18 @@ use std::net::IpAddr;
 use std::str::Utf8Error;
 use std::string::FromUtf8Error;
 
-use thiserror::Error;
-use axum::extract::rejection::{QueryRejection, BytesRejection};
-use axum::response::{IntoResponse, Response};
+use axum::extract::rejection::{BytesRejection, QueryRejection};
 use axum::http::StatusCode;
-use validator::ValidationErrors;
-use sea_orm::error::DbErr;
+use axum::response::{IntoResponse, Response};
 use quick_xml::Error as QXmlError;
-use quick_xml::{events::{Event, BytesStart}, writer::Writer, escape::escape};
+use quick_xml::{
+    escape::escape,
+    events::{BytesStart, Event},
+    writer::Writer,
+};
+use sea_orm::error::DbErr;
+use thiserror::Error;
+use validator::ValidationErrors;
 
 use super::util::HEADERS;
 
@@ -77,32 +81,75 @@ impl ProfileServerError {
         match error_data_xml_writer.write_event(Event::Empty(data_element_start)) {
             Ok(_) => String::from_utf8(error_data_xml_writer.into_inner().into_inner()).unwrap(),
             Err(err) => {
-                tracing::error!("failed to write xml data event for ProfileServerError response: {}", err.to_string());
+                tracing::error!(
+                    "failed to write xml data event for ProfileServerError response: {}",
+                    err.to_string()
+                );
                 String::from("<data ok=\"0\"")
             }
         }
-    }   
+    }
 }
 
 impl IntoResponse for ProfileServerError {
     fn into_response(self) -> Response {
         tracing::error!("{}", self.to_string());
         match self {
-            ProfileServerError::ValidationError(_) => (StatusCode::BAD_REQUEST, HEADERS, self.to_xml_string()),
-            ProfileServerError::AxumQueryRejection(_) => (StatusCode::BAD_REQUEST, HEADERS, self.to_xml_string()),
-            ProfileServerError::AxumBytesRejection(_) => (StatusCode::BAD_REQUEST, HEADERS, self.to_xml_string()),
-            ProfileServerError::SeaOrmDbError(_) => (StatusCode::INTERNAL_SERVER_ERROR, HEADERS, self.to_xml_string()),
-            ProfileServerError::QuickXmlError(_) => (StatusCode::INTERNAL_SERVER_ERROR, HEADERS, self.to_xml_string()),
-            ProfileServerError::QuickXmlDeserializationFailed(_) => (StatusCode::BAD_REQUEST, HEADERS, self.to_xml_string()),
-            ProfileServerError::Utf8Error(_) => (StatusCode::INTERNAL_SERVER_ERROR, HEADERS, self.to_xml_string()),
-            ProfileServerError::FromUtf8Error(_) => (StatusCode::INTERNAL_SERVER_ERROR, HEADERS, self.to_xml_string()),
-            ProfileServerError::SerdeJsonError(_) => (StatusCode::INTERNAL_SERVER_ERROR, HEADERS, self.to_xml_string()),
-            ProfileServerError::ClientAddressNotAllowed(_) => (StatusCode::UNAUTHORIZED, HEADERS, self.to_xml_string()),
-            ProfileServerError::RealmNotConfigured(_) => (StatusCode::BAD_REQUEST, HEADERS, self.to_xml_string()),
-            ProfileServerError::RealmDigestIncorrect(_, _) => (StatusCode::UNAUTHORIZED, HEADERS, self.to_xml_string()),
-            ProfileServerError::PlayerSidMismatch(_, _, _, _) => (StatusCode::UNAUTHORIZED, HEADERS, self.to_xml_string()),
-            ProfileServerError::PlayerRidIncorrect(_, _, _, _) => (StatusCode::UNAUTHORIZED, HEADERS, self.to_xml_string()),
-            ProfileServerError::PlayerNotFound(_, _, _) => (StatusCode::BAD_REQUEST, HEADERS, self.to_xml_string()),
+            ProfileServerError::ValidationError(_) => {
+                (StatusCode::BAD_REQUEST, HEADERS, self.to_xml_string())
+            }
+            ProfileServerError::AxumQueryRejection(_) => {
+                (StatusCode::BAD_REQUEST, HEADERS, self.to_xml_string())
+            }
+            ProfileServerError::AxumBytesRejection(_) => {
+                (StatusCode::BAD_REQUEST, HEADERS, self.to_xml_string())
+            }
+            ProfileServerError::SeaOrmDbError(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                HEADERS,
+                self.to_xml_string(),
+            ),
+            ProfileServerError::QuickXmlError(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                HEADERS,
+                self.to_xml_string(),
+            ),
+            ProfileServerError::QuickXmlDeserializationFailed(_) => {
+                (StatusCode::BAD_REQUEST, HEADERS, self.to_xml_string())
+            }
+            ProfileServerError::Utf8Error(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                HEADERS,
+                self.to_xml_string(),
+            ),
+            ProfileServerError::FromUtf8Error(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                HEADERS,
+                self.to_xml_string(),
+            ),
+            ProfileServerError::SerdeJsonError(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                HEADERS,
+                self.to_xml_string(),
+            ),
+            ProfileServerError::ClientAddressNotAllowed(_) => {
+                (StatusCode::UNAUTHORIZED, HEADERS, self.to_xml_string())
+            }
+            ProfileServerError::RealmNotConfigured(_) => {
+                (StatusCode::BAD_REQUEST, HEADERS, self.to_xml_string())
+            }
+            ProfileServerError::RealmDigestIncorrect(_, _) => {
+                (StatusCode::UNAUTHORIZED, HEADERS, self.to_xml_string())
+            }
+            ProfileServerError::PlayerSidMismatch(_, _, _, _) => {
+                (StatusCode::UNAUTHORIZED, HEADERS, self.to_xml_string())
+            }
+            ProfileServerError::PlayerRidIncorrect(_, _, _, _) => {
+                (StatusCode::UNAUTHORIZED, HEADERS, self.to_xml_string())
+            }
+            ProfileServerError::PlayerNotFound(_, _, _) => {
+                (StatusCode::BAD_REQUEST, HEADERS, self.to_xml_string())
+            }
         }
         .into_response()
     }

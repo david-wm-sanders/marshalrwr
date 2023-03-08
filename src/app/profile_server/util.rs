@@ -1,36 +1,67 @@
+use std::io::Cursor;
 use std::net::IpAddr;
 use std::sync::Arc;
-use std::io::Cursor;
 
-use sea_orm::{DatabaseConnection, ActiveValue, ActiveModelTrait};
-use sea_orm::{EntityTrait, QueryFilter, ColumnTrait, error::DbErr};
+use axum::http::header::{self, HeaderName};
+use quick_xml::se::Serializer as QuickXmlSerializer;
+use quick_xml::{
+    escape::escape,
+    events::{BytesEnd, BytesStart, Event},
+    writer::Writer,
+};
+use sea_orm::{error::DbErr, ColumnTrait, EntityTrait, QueryFilter};
+use sea_orm::{ActiveModelTrait, ActiveValue, DatabaseConnection};
 use serde::Serialize;
 use subtle::ConstantTimeEq;
-use quick_xml::{events::{Event, BytesStart, BytesEnd}, writer::Writer, escape::escape};
-use quick_xml::se::Serializer as QuickXmlSerializer;
-use axum::http::header::{self, HeaderName};
 
-use super::errors::ProfileServerError;
-use super::params::GetProfileParams;
 use super::super::state::AppState;
+use super::errors::ProfileServerError;
+use super::json::{ItemStore, Loadout};
+use super::params::GetProfileParams;
 use super::xml::{GetProfileDataXml, PlayerXml};
-use super::json::{Loadout, ItemStore};
-use entity::{Realm, RealmModel, RealmActiveModel, RealmColumn};
-use entity::{Player, PlayerModel, PlayerActiveModel};
-use entity::{Account, AccountModel, AccountActiveModel, AccountColumn};
+use entity::{Account, AccountActiveModel, AccountColumn, AccountModel};
+use entity::{Player, PlayerActiveModel, PlayerModel};
+use entity::{Realm, RealmActiveModel, RealmColumn, RealmModel};
 
 pub const HEADERS: [(HeaderName, &str); 1] = [(header::CONTENT_TYPE, "text/xml")];
-pub const ACCOUNT_COLUMNS: [AccountColumn; 28] = [AccountColumn::RealmId, AccountColumn::Hash, AccountColumn::GameVersion, AccountColumn::SquadTag,
-                                                  AccountColumn::MaxAuthorityReached, AccountColumn::Authority, AccountColumn::JobPoints, AccountColumn::Faction,
-                                                  AccountColumn::Name, AccountColumn::SoldierGroupId, AccountColumn::SoldierGroupName, AccountColumn::SquadSizeSetting,
-                                                  AccountColumn::Loadout, AccountColumn::Backpack, AccountColumn::Stash,
-                                                  AccountColumn::Kills, AccountColumn::Deaths, AccountColumn::TimePlayed,
-                                                  AccountColumn::PlayerKills, AccountColumn::Teamkills, AccountColumn::LongestKillStreak,
-                                                  AccountColumn::TargetsDestroyed, AccountColumn::VehiclesDestroyed, AccountColumn::SoldiersHealed,
-                                                  AccountColumn::DistanceMoved, AccountColumn::ShotsFired, AccountColumn::ThrowablesThrown, AccountColumn::RankProgression];
+pub const ACCOUNT_COLUMNS: [AccountColumn; 28] = [
+    AccountColumn::RealmId,
+    AccountColumn::Hash,
+    AccountColumn::GameVersion,
+    AccountColumn::SquadTag,
+    AccountColumn::MaxAuthorityReached,
+    AccountColumn::Authority,
+    AccountColumn::JobPoints,
+    AccountColumn::Faction,
+    AccountColumn::Name,
+    AccountColumn::SoldierGroupId,
+    AccountColumn::SoldierGroupName,
+    AccountColumn::SquadSizeSetting,
+    AccountColumn::Loadout,
+    AccountColumn::Backpack,
+    AccountColumn::Stash,
+    AccountColumn::Kills,
+    AccountColumn::Deaths,
+    AccountColumn::TimePlayed,
+    AccountColumn::PlayerKills,
+    AccountColumn::Teamkills,
+    AccountColumn::LongestKillStreak,
+    AccountColumn::TargetsDestroyed,
+    AccountColumn::VehiclesDestroyed,
+    AccountColumn::SoldiersHealed,
+    AccountColumn::DistanceMoved,
+    AccountColumn::ShotsFired,
+    AccountColumn::ThrowablesThrown,
+    AccountColumn::RankProgression,
+];
 
 pub fn check_ip_allowlist(state: &AppState, ip: IpAddr) -> Result<(), ProfileServerError> {
-    if !state.config.ps_allowed_ips.iter().any(|allowed_ip| ip.eq(allowed_ip) ) {
+    if !state
+        .config
+        .ps_allowed_ips
+        .iter()
+        .any(|allowed_ip| ip.eq(allowed_ip))
+    {
         // no address a in the allowed ips vec matches this address addr
         tracing::error!("ip '{}' is not allowed to get/set profiles", ip);
         return Err(ProfileServerError::ClientAddressNotAllowed(ip));
@@ -43,7 +74,12 @@ pub fn check_realm_is_configured(state: &AppState, realm: &str) -> Result<(), Pr
     // as we cannot derive the digest from knowing the realm secret and pw, the server expects the realms to be named (e.g. ["INCURSION"]) in the config instead
     // when the first request for a realm is received, it will be created in the db with the digest supplied in the first request
     // this should be fine when the IP allowlist for the profile server endpoints is implemented
-    if !state.config.realms.iter().any(|realm_name| realm_name == realm) {
+    if !state
+        .config
+        .realms
+        .iter()
+        .any(|realm_name| realm_name == realm)
+    {
         tracing::error!("realm '{}' not configured", realm);
         return Err(ProfileServerError::RealmNotConfigured(String::from(realm)));
     }
@@ -58,36 +94,66 @@ pub fn digest_ok(given_digest: &str, valid_digest: &str) -> bool {
     given_digest_bytes.ct_eq(valid_digest_bytes).into()
 }
 
-pub fn verify_realm_digest(realm_name: &str, realm_digest: &str, valid_digest: &str) -> Result<(), ProfileServerError> {
-    if !digest_ok(realm_digest, valid_digest) {         
+pub fn verify_realm_digest(
+    realm_name: &str,
+    realm_digest: &str,
+    valid_digest: &str,
+) -> Result<(), ProfileServerError> {
+    if !digest_ok(realm_digest, valid_digest) {
         tracing::error!("digest provided for realm '{}' incorrect", realm_name);
         return Err(ProfileServerError::RealmDigestIncorrect(
             String::from(realm_name),
-            String::from(realm_digest)));
+            String::from(realm_digest),
+        ));
     }
     Ok(())
 }
 
-pub fn verify_player_sid_and_rid(hash: i64, username: &str,
-                                 sid: i64, expected_sid: i64,
-                                 rid: &str, valid_rid: &str) -> Result<(), ProfileServerError> {
+pub fn verify_player_sid_and_rid(
+    hash: i64,
+    username: &str,
+    sid: i64,
+    expected_sid: i64,
+    rid: &str,
+    valid_rid: &str,
+) -> Result<(), ProfileServerError> {
     if sid != expected_sid {
-        return Err(ProfileServerError::PlayerSidMismatch(hash, String::from(username), sid, expected_sid));
+        return Err(ProfileServerError::PlayerSidMismatch(
+            hash,
+            String::from(username),
+            sid,
+            expected_sid,
+        ));
     }
 
     if !digest_ok(rid, valid_rid) {
         tracing::error!("rid provided for player '{}' incorrect", username);
-        return Err(ProfileServerError::PlayerRidIncorrect(hash, String::from(username), sid, String::from(rid)));
+        return Err(ProfileServerError::PlayerRidIncorrect(
+            hash,
+            String::from(username),
+            sid,
+            String::from(rid),
+        ));
     }
     Ok(())
 }
 
-pub async fn get_realm_from_db(db_conn: &DatabaseConnection, realm_name: &str) -> Result<Option<RealmModel>, DbErr> {
-    let realm = Realm::find().filter(RealmColumn::Name.eq(realm_name)).one(db_conn).await?;
+pub async fn get_realm_from_db(
+    db_conn: &DatabaseConnection,
+    realm_name: &str,
+) -> Result<Option<RealmModel>, DbErr> {
+    let realm = Realm::find()
+        .filter(RealmColumn::Name.eq(realm_name))
+        .one(db_conn)
+        .await?;
     Ok(realm)
 }
 
-pub async fn get_realm(state: &AppState, realm_name: &str, realm_digest: &str) -> Result<Arc<RealmModel>, ProfileServerError> {
+pub async fn get_realm(
+    state: &AppState,
+    realm_name: &str,
+    realm_digest: &str,
+) -> Result<Arc<RealmModel>, ProfileServerError> {
     tracing::debug!("searching for realm '{realm_name}' in realm cache");
     match state.cache.realms.get(realm_name) {
         Some(realm) => {
@@ -95,19 +161,26 @@ pub async fn get_realm(state: &AppState, realm_name: &str, realm_digest: &str) -
             // verify the realm digest
             verify_realm_digest(realm_name, realm_digest, &realm.digest)?;
             Ok(realm)
-        },
+        }
         None => {
             tracing::debug!("realm '{realm_name}' not found in cache, querying db");
             match get_realm_from_db(&state.db, realm_name).await? {
                 Some(realm) => {
-                    tracing::debug!("located realm '{realm_name}' [{}] in db, caching it", realm.id);
+                    tracing::debug!(
+                        "located realm '{realm_name}' [{}] in db, caching it",
+                        realm.id
+                    );
                     // insert the model into the realm cache
                     let arc_model = Arc::new(realm.clone());
-                    state.cache.realms.insert(String::from(realm_name), arc_model.clone()).await;
+                    state
+                        .cache
+                        .realms
+                        .insert(String::from(realm_name), arc_model.clone())
+                        .await;
                     // verify the realm digest
                     verify_realm_digest(realm_name, realm_digest, &realm.digest)?;
                     Ok(arc_model)
-                },
+                }
                 None => {
                     tracing::debug!("realm '{}' not found in db, creating it...", realm_name);
                     // create new realm active model
@@ -121,7 +194,11 @@ pub async fn get_realm(state: &AppState, realm_name: &str, realm_digest: &str) -
                     tracing::debug!("created realm '{}' [{}] in db", realm_name, realm.id);
                     // insert the model into the realm cache
                     let arc_model = Arc::new(realm);
-                    state.cache.realms.insert(String::from(realm_name), arc_model.clone()).await;
+                    state
+                        .cache
+                        .realms
+                        .insert(String::from(realm_name), arc_model.clone())
+                        .await;
                     Ok(arc_model)
                 }
             }
@@ -129,40 +206,69 @@ pub async fn get_realm(state: &AppState, realm_name: &str, realm_digest: &str) -
     }
 }
 
-pub async fn get_player_from_db(db_conn: &DatabaseConnection, player_hash: i64) -> Result<Option<PlayerModel>, DbErr> {
+pub async fn get_player_from_db(
+    db_conn: &DatabaseConnection,
+    player_hash: i64,
+) -> Result<Option<PlayerModel>, DbErr> {
     // get player by i64 hash id
     let player = Player::find_by_id(player_hash).one(db_conn).await?;
     Ok(player)
 }
 
-pub async fn get_player(state: &AppState,
-                        player_hash: i64, username: &str,
-                        sid: i64, rid: &str
-                        ) -> Result<Option<Arc<PlayerModel>>, ProfileServerError> {
-    tracing::debug!("searching for player '{}' [{}] in player cache", username, player_hash);
+pub async fn get_player(
+    state: &AppState,
+    player_hash: i64,
+    username: &str,
+    sid: i64,
+    rid: &str,
+) -> Result<Option<Arc<PlayerModel>>, ProfileServerError> {
+    tracing::debug!(
+        "searching for player '{}' [{}] in player cache",
+        username,
+        player_hash
+    );
     match state.cache.players.get(&player_hash) {
         Some(player) => {
-            tracing::debug!("found player '{}' [{}] in player cache", username, player_hash);
+            tracing::debug!(
+                "found player '{}' [{}] in player cache",
+                username,
+                player_hash
+            );
             // verify the player sid and rid (digest)
-            verify_player_sid_and_rid(player_hash, username,
-                                      sid, player.sid,
-                                      rid, &player.rid)?;
+            verify_player_sid_and_rid(player_hash, username, sid, player.sid, rid, &player.rid)?;
             Ok(Some(player))
-        },
+        }
         None => {
-            tracing::debug!("player '{}' [{}] not found in cache, querying db", username, player_hash);
+            tracing::debug!(
+                "player '{}' [{}] not found in cache, querying db",
+                username,
+                player_hash
+            );
             match get_player_from_db(&state.db, player_hash).await? {
                 Some(player) => {
-                    tracing::debug!("found player '{}' [{}] in db, caching it", username, player.hash);
+                    tracing::debug!(
+                        "found player '{}' [{}] in db, caching it",
+                        username,
+                        player.hash
+                    );
                     // insert the model into the player cache
                     let arc_model = Arc::new(player.clone());
-                    state.cache.players.insert(player_hash, arc_model.clone()).await;
+                    state
+                        .cache
+                        .players
+                        .insert(player_hash, arc_model.clone())
+                        .await;
                     // verify the player sid and rid (digest)
-                    verify_player_sid_and_rid(player_hash, username,
-                                              sid, player.sid,
-                                              rid, &player.rid)?;
+                    verify_player_sid_and_rid(
+                        player_hash,
+                        username,
+                        sid,
+                        player.sid,
+                        rid,
+                        &player.rid,
+                    )?;
                     Ok(Some(arc_model))
-                },
+                }
                 None => {
                     tracing::debug!("player '{}' [{}] not found in db", username, player_hash);
                     Ok(None)
@@ -172,31 +278,65 @@ pub async fn get_player(state: &AppState,
     }
 }
 
-pub async fn get_account_from_db(db_conn: &DatabaseConnection, realm_id: i32, player_hash: i64) -> Result<Option<AccountModel>, DbErr> {
+pub async fn get_account_from_db(
+    db_conn: &DatabaseConnection,
+    realm_id: i32,
+    player_hash: i64,
+) -> Result<Option<AccountModel>, DbErr> {
     // get the account by (realm_id, player_hash)
-    let account = Account::find_by_id((realm_id, player_hash)).one(db_conn).await?;
+    let account = Account::find_by_id((realm_id, player_hash))
+        .one(db_conn)
+        .await?;
     Ok(account)
 }
 
-pub async fn get_account(state: &AppState, realm: &Arc<RealmModel>, player: &Arc<PlayerModel>) -> Result<Option<Arc<AccountModel>>, ProfileServerError> {
-    tracing::debug!("searching for account ('{}','{}') in account cache", realm.name, player.username);
+pub async fn get_account(
+    state: &AppState,
+    realm: &Arc<RealmModel>,
+    player: &Arc<PlayerModel>,
+) -> Result<Option<Arc<AccountModel>>, ProfileServerError> {
+    tracing::debug!(
+        "searching for account ('{}','{}') in account cache",
+        realm.name,
+        player.username
+    );
     match state.cache.accounts.get(&(realm.id, player.hash)) {
         Some(account) => {
-            tracing::debug!("found account ('{}','{}') in account cache", realm.name, player.username);
+            tracing::debug!(
+                "found account ('{}','{}') in account cache",
+                realm.name,
+                player.username
+            );
             Ok(Some(account))
-        },
+        }
         None => {
-            tracing::debug!("account ('{}','{}') not found in account cache, querying db", realm.name, player.username);
+            tracing::debug!(
+                "account ('{}','{}') not found in account cache, querying db",
+                realm.name,
+                player.username
+            );
             match get_account_from_db(&state.db, realm.id, player.hash).await? {
                 Some(account) => {
-                    tracing::debug!("found account ('{}','{}') in db, caching it", realm.name, player.username);
+                    tracing::debug!(
+                        "found account ('{}','{}') in db, caching it",
+                        realm.name,
+                        player.username
+                    );
                     // insert the model into the account cache
                     let arc_model = Arc::new(account.clone());
-                    state.cache.accounts.insert((realm.id, player.hash), arc_model.clone()).await;
+                    state
+                        .cache
+                        .accounts
+                        .insert((realm.id, player.hash), arc_model.clone())
+                        .await;
                     Ok(Some(arc_model))
-                },
+                }
                 None => {
-                    tracing::debug!("account ('{}','{}') not found in db", realm.name, player.username);
+                    tracing::debug!(
+                        "account ('{}','{}') not found in db",
+                        realm.name,
+                        player.username
+                    );
                     Ok(None)
                 }
             }
@@ -204,21 +344,31 @@ pub async fn get_account(state: &AppState, realm: &Arc<RealmModel>, player: &Arc
     }
 }
 
-pub async fn enlist_player(state: &AppState, params: &GetProfileParams) -> Result<Arc<PlayerModel>, ProfileServerError> {
+pub async fn enlist_player(
+    state: &AppState,
+    params: &GetProfileParams,
+) -> Result<Arc<PlayerModel>, ProfileServerError> {
     // todo: do any stateful validation of params now - e.g. check username against blocklist
     tracing::debug!("creating papers for player '{}'", &params.username);
     let new_player = PlayerActiveModel {
         hash: ActiveValue::Set(params.hash),
         username: ActiveValue::Set(params.username.to_owned()),
         sid: ActiveValue::Set(params.sid),
-        rid: ActiveValue::Set(params.rid.to_owned())
+        rid: ActiveValue::Set(params.rid.to_owned()),
     };
     // insert new player into db
     let player = new_player.insert(&state.db).await?;
     tracing::debug!("inserted papers for player '{}' into db", &params.username);
     let arc_player = Arc::new(player);
-    state.cache.players.insert(params.hash, arc_player.clone()).await;
-    tracing::debug!("inserted papers for player '{}' into player cache", &params.username);
+    state
+        .cache
+        .players
+        .insert(params.hash, arc_player.clone())
+        .await;
+    tracing::debug!(
+        "inserted papers for player '{}' into player cache",
+        &params.username
+    );
     Ok(arc_player)
 }
 
@@ -240,7 +390,10 @@ pub fn make_init_profile_xml(username: &str, rid: &str) -> Result<String, Profil
     Ok(result)
 }
 
-pub fn make_account_model(realm_id: i32, player_xml: &PlayerXml) -> Result<AccountActiveModel, ProfileServerError> {
+pub fn make_account_model(
+    realm_id: i32,
+    player_xml: &PlayerXml,
+) -> Result<AccountActiveModel, ProfileServerError> {
     let loadout = Loadout::new(&player_xml.person.equipped_items);
     let loadout_json = serde_json::to_string(&loadout)?;
     let backpack_store = ItemStore::new(&player_xml.person.backpack.items);
@@ -248,39 +401,42 @@ pub fn make_account_model(realm_id: i32, player_xml: &PlayerXml) -> Result<Accou
     let stash_store = ItemStore::new(&player_xml.person.stash.items);
     let stash_json = serde_json::to_string(&stash_store)?;
     let account_model = AccountActiveModel {
-                    realm_id: ActiveValue::Set(realm_id),
-                    hash: ActiveValue::Set(player_xml.hash),
-                    game_version: ActiveValue::Set(player_xml.profile.game_version),
-                    squad_tag: ActiveValue::Set(player_xml.profile.squad_tag.to_owned()),
-                    max_authority_reached: ActiveValue::Set(player_xml.person.max_authority_reached as f64),
-                    authority: ActiveValue::Set(player_xml.person.authority as f64),
-                    job_points: ActiveValue::Set(player_xml.person.job_points as f64),
-                    faction: ActiveValue::Set(player_xml.person.faction),
-                    name: ActiveValue::Set(player_xml.person.name.to_owned()),
-                    soldier_group_id: ActiveValue::Set(player_xml.person.soldier_group_id),
-                    soldier_group_name: ActiveValue::Set(player_xml.person.soldier_group_name.to_owned()),
-                    squad_size_setting: ActiveValue::Set(player_xml.person.squad_size_setting),
-                    loadout: ActiveValue::Set(loadout_json),
-                    backpack: ActiveValue::Set(backpack_json),
-                    stash: ActiveValue::Set(stash_json),
-                    kills: ActiveValue::Set(player_xml.profile.stats.kills),
-                    deaths: ActiveValue::Set(player_xml.profile.stats.deaths),
-                    time_played: ActiveValue::Set(player_xml.profile.stats.time_played as i32),
-                    player_kills: ActiveValue::Set(player_xml.profile.stats.player_kills),
-                    teamkills: ActiveValue::Set(player_xml.profile.stats.teamkills),
-                    longest_kill_streak: ActiveValue::Set(player_xml.profile.stats.longest_kill_streak),
-                    targets_destroyed: ActiveValue::Set(player_xml.profile.stats.targets_destroyed),
-                    vehicles_destroyed: ActiveValue::Set(player_xml.profile.stats.vehicles_destroyed),
-                    soldiers_healed: ActiveValue::Set(player_xml.profile.stats.soldiers_healed),
-                    distance_moved: ActiveValue::Set(player_xml.profile.stats.distance_moved as f64),
-                    shots_fired: ActiveValue::Set(player_xml.profile.stats.shots_fired),
-                    throwables_thrown: ActiveValue::Set(player_xml.profile.stats.throwables_thrown),
-                    rank_progression: ActiveValue::Set(player_xml.profile.stats.rank_progression as f64)
+        realm_id: ActiveValue::Set(realm_id),
+        hash: ActiveValue::Set(player_xml.hash),
+        game_version: ActiveValue::Set(player_xml.profile.game_version),
+        squad_tag: ActiveValue::Set(player_xml.profile.squad_tag.to_owned()),
+        max_authority_reached: ActiveValue::Set(player_xml.person.max_authority_reached as f64),
+        authority: ActiveValue::Set(player_xml.person.authority as f64),
+        job_points: ActiveValue::Set(player_xml.person.job_points as f64),
+        faction: ActiveValue::Set(player_xml.person.faction),
+        name: ActiveValue::Set(player_xml.person.name.to_owned()),
+        soldier_group_id: ActiveValue::Set(player_xml.person.soldier_group_id),
+        soldier_group_name: ActiveValue::Set(player_xml.person.soldier_group_name.to_owned()),
+        squad_size_setting: ActiveValue::Set(player_xml.person.squad_size_setting),
+        loadout: ActiveValue::Set(loadout_json),
+        backpack: ActiveValue::Set(backpack_json),
+        stash: ActiveValue::Set(stash_json),
+        kills: ActiveValue::Set(player_xml.profile.stats.kills),
+        deaths: ActiveValue::Set(player_xml.profile.stats.deaths),
+        time_played: ActiveValue::Set(player_xml.profile.stats.time_played as i32),
+        player_kills: ActiveValue::Set(player_xml.profile.stats.player_kills),
+        teamkills: ActiveValue::Set(player_xml.profile.stats.teamkills),
+        longest_kill_streak: ActiveValue::Set(player_xml.profile.stats.longest_kill_streak),
+        targets_destroyed: ActiveValue::Set(player_xml.profile.stats.targets_destroyed),
+        vehicles_destroyed: ActiveValue::Set(player_xml.profile.stats.vehicles_destroyed),
+        soldiers_healed: ActiveValue::Set(player_xml.profile.stats.soldiers_healed),
+        distance_moved: ActiveValue::Set(player_xml.profile.stats.distance_moved as f64),
+        shots_fired: ActiveValue::Set(player_xml.profile.stats.shots_fired),
+        throwables_thrown: ActiveValue::Set(player_xml.profile.stats.throwables_thrown),
+        rank_progression: ActiveValue::Set(player_xml.profile.stats.rank_progression as f64),
     };
     Ok(account_model)
 }
 
-pub fn make_account_xml(player: &Arc<PlayerModel>, account: &Arc<AccountModel>) -> Result<String, ProfileServerError> {
+pub fn make_account_xml(
+    player: &Arc<PlayerModel>,
+    account: &Arc<AccountModel>,
+) -> Result<String, ProfileServerError> {
     let data = GetProfileDataXml::new(player, account)?;
     let serializer = QuickXmlSerializer::with_root(String::new(), Some("data"))?;
     let mut xml = data.serialize(serializer)?;

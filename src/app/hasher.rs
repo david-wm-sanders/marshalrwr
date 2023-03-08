@@ -22,7 +22,7 @@ pub fn rwr1_hash_username(username: &str) -> i64 {
 }
 
 struct Djb2aHash32 {
-    v: u32
+    v: u32,
 }
 
 impl Default for Djb2aHash32 {
@@ -34,9 +34,7 @@ impl Default for Djb2aHash32 {
 impl Hasher for Djb2aHash32 {
     fn write(&mut self, bytes: &[u8]) {
         for &b in bytes {
-            self.v = (self.v << 5)
-                     .wrapping_add(self.v)
-                     .wrapping_add(b as u32);
+            self.v = (self.v << 5).wrapping_add(self.v).wrapping_add(b as u32);
         }
     }
 

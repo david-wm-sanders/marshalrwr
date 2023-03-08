@@ -1,18 +1,18 @@
 use lazy_static::lazy_static;
-use validator::ValidationError;
 use regex::Regex;
+use validator::ValidationError;
 // use async_trait::async_trait;
-use axum::extract::{Query, FromRequest, FromRequestParts, rejection::QueryRejection};
-use axum::http::request::{Request, Parts};
 use axum::body::{Bytes, HttpBody};
+use axum::extract::{rejection::QueryRejection, FromRequest, FromRequestParts, Query};
+use axum::http::request::{Parts, Request};
 use axum::{async_trait, BoxError};
+use percent_encoding::percent_decode_str;
 use serde::de::DeserializeOwned;
 use validator::Validate;
-use percent_encoding::percent_decode_str;
 
+use super::super::hasher::rwr1_hash_username;
 use super::errors::ProfileServerError;
 use super::params::GetProfileParams;
-use super::super::hasher::rwr1_hash_username;
 
 lazy_static! {
     pub static ref RE_HEX_STR: Regex = Regex::new(r"^([0-9A-Fa-f]{2})+$").unwrap();
@@ -26,7 +26,7 @@ impl<T, S> FromRequestParts<S> for ValidatedQuery<T>
 where
     T: DeserializeOwned + Validate,
     S: Send + Sync,
-    Query<T>: FromRequestParts<S, Rejection = QueryRejection>
+    Query<T>: FromRequestParts<S, Rejection = QueryRejection>,
 {
     type Rejection = ProfileServerError;
 
@@ -82,7 +82,9 @@ where
 
 pub fn validate_username(username: &str) -> Result<(), ValidationError> {
     if username.contains("  ") {
-        return Err(ValidationError::new("username contains multiple consecutive spaces"));
+        return Err(ValidationError::new(
+            "username contains multiple consecutive spaces",
+        ));
     }
     if username.starts_with(' ') {
         return Err(ValidationError::new("username starts with a space"));

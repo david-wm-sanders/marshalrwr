@@ -1,10 +1,14 @@
 use std::sync::Arc;
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-use super::{validation::{validate_username, RE_HEX_STR}, errors::ProfileServerError, json::{Loadout, ItemStore}};
-use entity::{PlayerModel, AccountModel};
+use super::{
+    errors::ProfileServerError,
+    json::{ItemStore, Loadout},
+    validation::{validate_username, RE_HEX_STR},
+};
+use entity::{AccountModel, PlayerModel};
 
 // todo: validate that hash for player username
 
@@ -18,11 +22,11 @@ pub struct SetProfileDataXml {
 #[derive(Debug, Deserialize, Validate)]
 pub struct PlayerXml {
     #[serde(rename = "@hash")]
-    #[validate(range(min=1, max="u32::MAX"))]
+    #[validate(range(min = 1, max = "u32::MAX"))]
     pub hash: i64,
     #[serde(rename = "@rid")]
-    #[validate(length(equal=64))]
-    #[validate(regex(path="RE_HEX_STR", code="rid not hexadecimal"))]
+    #[validate(length(equal = 64))]
+    #[validate(regex(path = "RE_HEX_STR", code = "rid not hexadecimal"))]
     pub rid: String,
     #[validate]
     pub person: PersonXml,
@@ -53,7 +57,7 @@ pub struct PersonXml {
     #[serde(rename = "item")]
     pub equipped_items: Vec<EquippedItemXml>,
     pub backpack: ItemStoreXml,
-    pub stash: ItemStoreXml, 
+    pub stash: ItemStoreXml,
 }
 
 #[derive(Debug, Serialize, Deserialize, Validate)]
@@ -78,13 +82,16 @@ pub struct ItemStoreXml {
 impl ItemStoreXml {
     pub fn new(item_store: &ItemStore) -> Self {
         Self {
-            items: item_store.items.iter().map(|item| {
-                StoredItemXml {
+            items: item_store
+                .items
+                .iter()
+                .map(|item| StoredItemXml {
                     class: item.class,
-                    index: item.index, key: item.key.to_owned(),
-                    amount: item.amount
-                }
-            }).collect()
+                    index: item.index,
+                    key: item.key.to_owned(),
+                    amount: item.amount,
+                })
+                .collect(),
         }
     }
 }
@@ -106,19 +113,19 @@ pub struct ProfileXml {
     #[serde(rename = "@game_version")]
     pub game_version: i32,
     #[serde(rename = "@username")]
-    #[validate(length(min=1, max=32))]
+    #[validate(length(min = 1, max = 32))]
     #[validate(non_control_character)]
-    #[validate(custom(function="validate_username"))]
+    #[validate(custom(function = "validate_username"))]
     pub username: String,
     #[serde(rename = "@sid")]
-    #[validate(range(min=1, max="u32::MAX"))]
+    #[validate(range(min = 1, max = "u32::MAX"))]
     pub sid: i64,
     #[serde(rename = "@rid")]
-    #[validate(length(equal=64))]
-    #[validate(regex(path="RE_HEX_STR", code="rid not hexadecimal"))]
+    #[validate(length(equal = 64))]
+    #[validate(regex(path = "RE_HEX_STR", code = "rid not hexadecimal"))]
     pub rid: String,
     #[serde(rename = "@squad_tag")]
-    #[validate(length(min=0, max=3))]
+    #[validate(length(min = 0, max = 3))]
     pub squad_tag: String,
     pub stats: StatsXml,
 }
@@ -162,9 +169,11 @@ pub struct GetProfileDataXml {
     person: PersonXml,
 }
 
-
 impl GetProfileDataXml {
-    pub fn new(player: &Arc<PlayerModel>, account: &Arc<AccountModel>) -> Result<Self, ProfileServerError> {
+    pub fn new(
+        player: &Arc<PlayerModel>,
+        account: &Arc<AccountModel>,
+    ) -> Result<Self, ProfileServerError> {
         let loadout_json: Loadout = serde_json::from_str(&account.loadout)?;
         let backpack_json: ItemStore = serde_json::from_str(&account.backpack)?;
         let stash_json: ItemStore = serde_json::from_str(&account.stash)?;
@@ -180,13 +189,16 @@ impl GetProfileDataXml {
                 soldier_group_id: account.soldier_group_id,
                 soldier_group_name: account.soldier_group_name.clone(),
                 squad_size_setting: account.squad_size_setting,
-                equipped_items: loadout_json.slots.iter().map(|item| {
-                    EquippedItemXml {
+                equipped_items: loadout_json
+                    .slots
+                    .iter()
+                    .map(|item| EquippedItemXml {
                         slot: item.slot,
-                        index: item.index, key: item.key.to_owned(),
-                        amount: item.amount
-                    }
-                }).collect(),
+                        index: item.index,
+                        key: item.key.to_owned(),
+                        amount: item.amount,
+                    })
+                    .collect(),
                 backpack: ItemStoreXml::new(&backpack_json),
                 stash: ItemStoreXml::new(&stash_json),
             },
@@ -210,7 +222,7 @@ impl GetProfileDataXml {
                     shots_fired: account.shots_fired,
                     throwables_thrown: account.throwables_thrown,
                     rank_progression: account.rank_progression as f32,
-                }
+                },
             },
         })
     }

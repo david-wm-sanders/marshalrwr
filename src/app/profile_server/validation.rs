@@ -58,7 +58,7 @@ where
         let xml_str = std::str::from_utf8(&body_vec)?;
         // tracing::debug!("{xml_str:#?}");
         let decoded_xml_str = percent_decode_str(xml_str).decode_utf8()?;
-        tracing::debug!("{decoded_xml_str}");
+        // tracing::debug!("{decoded_xml_str}");
         let data: T = quick_xml::de::from_str(decoded_xml_str.as_ref())?;
         // validate the xml data
         data.validate()?;

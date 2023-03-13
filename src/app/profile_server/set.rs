@@ -38,7 +38,7 @@ pub async fn rwr1_set_profile_handler(
     tracing::info!("locating realm '{}'", &params.realm);
     let realm = get_realm(&state, &params.realm, &params.realm_digest).await?;
 
-    tracing::debug!("{data:#?}");
+    // tracing::debug!("{data:#?}");
     let mut accounts_to_update: Vec<AccountActiveModel> = Vec::new();
     for player_xml in data.players.iter() {
         tracing::info!("processing set xml for player '{}'", player_xml.hash);

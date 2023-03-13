@@ -23,9 +23,11 @@ enum Account {
     SoldierGroupId,
     SoldierGroupName,
     SquadSizeSetting,
+    // equipment stores
     Loadout,
     Backpack,
     Stash,
+    // stats
     Kills,
     Deaths,
     TimePlayed,
@@ -40,7 +42,10 @@ enum Account {
     ShotsFired,
     ThrowablesThrown,
     RankProgression,
-    // todo! stats monitors
+    // monitors
+    LongestDeathStreak,
+    KillCombos,
+    CriteriaMonitors,
 }
 
 #[async_trait::async_trait]
@@ -84,7 +89,11 @@ impl MigrationTrait for Migration {
                 .col(ColumnDef::new(Account::ShotsFired).integer().not_null())
                 .col(ColumnDef::new(Account::ThrowablesThrown).integer().not_null())
                 .col(ColumnDef::new(Account::RankProgression).float().not_null())
-                // todo: monitors!
+                // monitors!?
+                // split out longest death streak and kill combo as special cases
+                .col(ColumnDef::new(Account::LongestDeathStreak).integer().not_null())
+                .col(ColumnDef::new(Account::KillCombos).json().not_null())
+                .col(ColumnDef::new(Account::CriteriaMonitors).json().not_null())
                 // setup composite primary key
                 .primary_key(Index::create().col(Account::RealmId).col(Account::Hash))
                 // add foreign keys

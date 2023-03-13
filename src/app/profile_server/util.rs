@@ -24,7 +24,7 @@ use entity::{Player, PlayerActiveModel, PlayerModel};
 use entity::{Realm, RealmActiveModel, RealmColumn, RealmModel};
 
 pub const HEADERS: [(HeaderName, &str); 1] = [(header::CONTENT_TYPE, "text/xml")];
-pub const ACCOUNT_COLUMNS: [AccountColumn; 28] = [
+pub const ACCOUNT_COLUMNS: [AccountColumn; 31] = [
     AccountColumn::RealmId,
     AccountColumn::Hash,
     AccountColumn::GameVersion,
@@ -53,6 +53,9 @@ pub const ACCOUNT_COLUMNS: [AccountColumn; 28] = [
     AccountColumn::ShotsFired,
     AccountColumn::ThrowablesThrown,
     AccountColumn::RankProgression,
+    AccountColumn::LongestDeathStreak,
+    AccountColumn::KillCombos,
+    AccountColumn::CriteriaMonitors,
 ];
 
 pub fn check_ip_allowlist(state: &AppState, ip: IpAddr) -> Result<(), ProfileServerError> {
@@ -429,6 +432,9 @@ pub fn make_account_model(
         shots_fired: ActiveValue::Set(player_xml.profile.stats.shots_fired),
         throwables_thrown: ActiveValue::Set(player_xml.profile.stats.throwables_thrown),
         rank_progression: ActiveValue::Set(player_xml.profile.stats.rank_progression as f64),
+        longest_death_streak: ActiveValue::Set(0),
+        kill_combos: ActiveValue::Set("".to_owned()),
+        criteria_monitors: ActiveValue::Set("".to_owned()),
     };
     Ok(account_model)
 }

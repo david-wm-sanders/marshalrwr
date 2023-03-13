@@ -40,6 +40,9 @@ pub struct Model {
     pub throwables_thrown: i32,
     #[sea_orm(column_type = "Double")]
     pub rank_progression: f64,
+    pub longest_death_streak: i32,
+    pub kill_combos: String,
+    pub criteria_monitors: String,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

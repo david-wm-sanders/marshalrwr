@@ -130,7 +130,7 @@ pub struct ProfileXml {
     pub stats: StatsXml,
 }
 
-#[derive(Debug, Serialize, Deserialize, Validate)]
+#[derive(Debug, Default, Serialize, Deserialize, Validate)]
 pub struct StatsXml {
     #[serde(rename = "@kills")]
     pub kills: i32,
@@ -158,7 +158,40 @@ pub struct StatsXml {
     pub throwables_thrown: i32,
     #[serde(rename = "@rank_progression")]
     pub rank_progression: f32,
-    // todo: add monitors
+    // monitors
+    #[serde(rename = "monitor")]
+    #[serde(default)]
+    pub monitors: Vec<MonitorXml>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Validate)]
+pub struct MonitorXml {
+    #[serde(rename = "@name")]
+    pub name: Option<String>,
+    #[serde(rename = "@longest_death_streak")]
+    pub longest_death_streak: Option<i32>,
+    #[serde(rename = "@level")]
+    pub level: Option<i32>,
+    #[serde(rename = "entry")]
+    #[serde(default)]
+    pub entries: Vec<EntryXml>,
+    #[serde(rename = "criteria")]
+    #[serde(default)]
+    pub criteria: Vec<CriteriaXml>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EntryXml {
+    #[serde(rename = "@combo")]
+    pub combo: i32,
+    #[serde(rename = "@count")]
+    pub count: i32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CriteriaXml {
+    #[serde(rename = "@count")]
+    pub count: i32,
 }
 
 #[derive(Debug, Serialize)]
@@ -222,6 +255,7 @@ impl GetProfileDataXml {
                     shots_fired: account.shots_fired,
                     throwables_thrown: account.throwables_thrown,
                     rank_progression: account.rank_progression as f32,
+                    ..Default::default()
                 },
             },
         })

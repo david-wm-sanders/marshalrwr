@@ -169,8 +169,10 @@ pub struct MonitorXml {
     #[serde(rename = "@name")]
     pub name: Option<String>,
     #[serde(rename = "@longest_death_streak")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub longest_death_streak: Option<i32>,
     #[serde(rename = "@level")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub level: Option<i32>,
     #[serde(rename = "entry")]
     #[serde(default)]

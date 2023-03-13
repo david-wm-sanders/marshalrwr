@@ -16,9 +16,9 @@ use subtle::ConstantTimeEq;
 
 use super::super::state::AppState;
 use super::errors::ProfileServerError;
-use super::json::{ItemStore, Loadout};
+use super::json::{ItemStore, Loadout, KillCombos, CriteriaMonitor, CriteriaMonitors};
 use super::params::GetProfileParams;
-use super::xml::{GetProfileDataXml, PlayerXml};
+use super::xml::{GetProfileDataXml, PlayerXml, MonitorXml};
 use entity::{Account, AccountActiveModel, AccountColumn, AccountModel};
 use entity::{Player, PlayerActiveModel, PlayerModel};
 use entity::{Realm, RealmActiveModel, RealmColumn, RealmModel};
@@ -397,12 +397,38 @@ pub fn make_account_model(
     realm_id: i32,
     player_xml: &PlayerXml,
 ) -> Result<AccountActiveModel, ProfileServerError> {
+    // process loadout, backpack and stash
     let loadout = Loadout::new(&player_xml.person.equipped_items);
     let loadout_json = serde_json::to_string(&loadout)?;
     let backpack_store = ItemStore::new(&player_xml.person.backpack.items);
     let backpack_json = serde_json::to_string(&backpack_store)?;
     let stash_store = ItemStore::new(&player_xml.person.stash.items);
     let stash_json = serde_json::to_string(&stash_store)?;
+    // process monitors
+    let mut longest_death_steak = 0;
+    let mut kill_combo_json = String::new();
+    let mut monitors: Vec<CriteriaMonitor> = Vec::new();
+    for monitor_xml in &player_xml.profile.stats.monitors {
+        if monitor_xml.name == Some(String::from("kill combo")) {
+            // process the kill combo monitor
+            let kill_combo = KillCombos::new(&monitor_xml.entries);
+            kill_combo_json = serde_json::to_string(&kill_combo)?;
+        } else if monitor_xml.name == Some(String::from("death streak")) {
+            // process the death streak monitor
+            longest_death_steak = monitor_xml.longest_death_streak.unwrap_or(0);
+        } else if monitor_xml.name == None {
+            // some monitor xml are empty xd, skip
+            continue;
+        } else {
+            // every other monitor
+            let critera_monitor = CriteriaMonitor::new(monitor_xml);
+            monitors.push(critera_monitor);
+        }
+    }
+    let criteria_monitors = CriteriaMonitors { monitors };
+    let criteria_monitors_json = serde_json::to_string(&criteria_monitors)?;
+
+    // make an active account model
     let account_model = AccountActiveModel {
         realm_id: ActiveValue::Set(realm_id),
         hash: ActiveValue::Set(player_xml.hash),
@@ -432,9 +458,9 @@ pub fn make_account_model(
         shots_fired: ActiveValue::Set(player_xml.profile.stats.shots_fired),
         throwables_thrown: ActiveValue::Set(player_xml.profile.stats.throwables_thrown),
         rank_progression: ActiveValue::Set(player_xml.profile.stats.rank_progression as f64),
-        longest_death_streak: ActiveValue::Set(0),
-        kill_combos: ActiveValue::Set("".to_owned()),
-        criteria_monitors: ActiveValue::Set("".to_owned()),
+        longest_death_streak: ActiveValue::Set(longest_death_steak),
+        kill_combos: ActiveValue::Set(kill_combo_json),
+        criteria_monitors: ActiveValue::Set(criteria_monitors_json),
     };
     Ok(account_model)
 }

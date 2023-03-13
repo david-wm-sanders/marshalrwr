@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use super::xml::{EquippedItemXml, StoredItemXml};
+use super::xml::{EquippedItemXml, StoredItemXml, EntryXml, MonitorXml};
 
 #[derive(Serialize, Deserialize)]
 pub struct Loadout {
@@ -71,4 +71,47 @@ pub struct StoredItem {
     pub key: String,
     #[serde(rename = "a")]
     pub amount: u16,
+}
+
+pub type KillCombo = (i32, i32);
+
+#[derive(Serialize, Deserialize)]
+pub struct KillCombos {
+    pub entries: Vec<KillCombo>,
+}
+
+impl KillCombos {
+    pub fn new(entries: &[EntryXml]) -> Self {
+        Self {
+            entries: entries
+                .iter()
+                .map(|entry| (entry.combo, entry.count) )
+                .collect(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct CriteriaMonitors {
+    pub monitors: Vec<CriteriaMonitor>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct CriteriaMonitor {
+    #[serde(rename = "n")]
+    pub name: String,
+    #[serde(rename = "l")]
+    pub level: i32,
+    #[serde(rename = "c")]
+    pub critera: Vec<i32>,
+}
+
+impl CriteriaMonitor {
+    pub fn new(criteria_monitor: &MonitorXml) -> Self {
+        Self {
+            name: criteria_monitor.name.to_owned().unwrap_or_default(),
+            level: criteria_monitor.level.unwrap_or(0),
+            critera: criteria_monitor.criteria.iter().map(|c| c.count).collect(),
+        }
+    }
 }

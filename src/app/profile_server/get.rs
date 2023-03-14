@@ -29,12 +29,12 @@ pub async fn rwr1_get_profile_handler(
     check_realm_is_configured(&state, &params.realm)?;
 
     // get the realm, making it if it doesn't exist yet
-    tracing::info!("locating realm '{}'", &params.realm);
+    tracing::info!("locating realm '{}'...", &params.realm);
     let realm = get_realm(&state, &params.realm, &params.realm_digest).await?;
 
     // find the player, if any
     tracing::info!(
-        "finding enlistment papers for player '{}'",
+        "finding enlistment papers for player '{}'...",
         &params.username
     );
     let opt_player = get_player(
@@ -48,7 +48,7 @@ pub async fn rwr1_get_profile_handler(
     match opt_player {
         None => {
             tracing::info!(
-                "player '{}' doesn't have any papers, enlisting them (pending checks)",
+                "player '{}' not registered, attempting to enlist them...",
                 &params.username
             );
             // enlist player and get back player model
@@ -96,7 +96,7 @@ pub async fn rwr1_get_profile_handler(
                     let account_xml = make_account_xml(&player, &account)?;
                     // tracing::debug!("{account_xml}");
                     tracing::info!(
-                        "sending person-profile for '{}' in '{}' to game server",
+                        "sending account xml for '{}' in '{}' to game server",
                         player.username,
                         realm.name
                     );

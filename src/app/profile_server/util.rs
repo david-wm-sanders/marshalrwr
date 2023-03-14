@@ -84,7 +84,6 @@ pub fn check_realm_is_configured(state: &AppState, realm: &str) -> Result<(), Pr
         .iter()
         .any(|realm_name| realm_name == realm)
     {
-        tracing::error!("realm '{}' not configured", realm);
         return Err(ProfileServerError::RealmNotConfigured(String::from(realm)));
     }
     Ok(())
@@ -104,7 +103,6 @@ pub fn verify_realm_digest(
     valid_digest: &str,
 ) -> Result<(), ProfileServerError> {
     if !digest_ok(realm_digest, valid_digest) {
-        tracing::error!("digest provided for realm '{}' incorrect", realm_name);
         return Err(ProfileServerError::RealmDigestIncorrect(
             String::from(realm_name),
             String::from(realm_digest),
@@ -131,7 +129,6 @@ pub fn verify_player_sid_and_rid(
     }
 
     if !digest_ok(rid, valid_rid) {
-        tracing::error!("rid provided for player '{}' incorrect", username);
         return Err(ProfileServerError::PlayerRidIncorrect(
             hash,
             String::from(username),
@@ -158,16 +155,16 @@ pub async fn get_realm(
     realm_name: &str,
     realm_digest: &str,
 ) -> Result<Arc<RealmModel>, ProfileServerError> {
-    tracing::debug!("searching for realm '{realm_name}' in realm cache");
+    // search for realm in cache
     match state.cache.realms.get(realm_name) {
         Some(realm) => {
-            tracing::debug!("located realm '{realm_name}' [{}] in realm cache", realm.id);
+            tracing::debug!("located realm '{realm_name}' [{}] in cache", realm.id);
             // verify the realm digest
             verify_realm_digest(realm_name, realm_digest, &realm.digest)?;
             Ok(realm)
         }
         None => {
-            tracing::debug!("realm '{realm_name}' not found in cache, querying db");
+            // realm not found in cache, query db
             match get_realm_from_db(&state.db, realm_name).await? {
                 Some(realm) => {
                     tracing::debug!(
@@ -193,7 +190,7 @@ pub async fn get_realm(
                         digest: ActiveValue::Set(realm_digest.to_owned()),
                         ..Default::default()
                     };
-                    // insert this new realm into the db and return model
+                    // insert this new realm into the db
                     let realm = new_realm.insert(&state.db).await?;
                     tracing::debug!("created realm '{}' [{}] in db", realm_name, realm.id);
                     // insert the model into the realm cache
@@ -226,15 +223,11 @@ pub async fn get_player(
     sid: i64,
     rid: &str,
 ) -> Result<Option<Arc<PlayerModel>>, ProfileServerError> {
-    tracing::debug!(
-        "searching for player '{}' [{}] in player cache",
-        username,
-        player_hash
-    );
+    // search for player in cache
     match state.cache.players.get(&player_hash) {
         Some(player) => {
             tracing::debug!(
-                "found player '{}' [{}] in player cache",
+                "found player '{}' [{}] in cache",
                 username,
                 player_hash
             );
@@ -299,26 +292,18 @@ pub async fn get_account(
     realm: &Arc<RealmModel>,
     player: &Arc<PlayerModel>,
 ) -> Result<Option<Arc<AccountModel>>, ProfileServerError> {
-    tracing::debug!(
-        "searching for account ('{}','{}') in account cache",
-        realm.name,
-        player.username
-    );
+    // search for account in cache
     match state.cache.accounts.get(&(realm.id, player.hash)) {
         Some(account) => {
             tracing::debug!(
-                "found account ('{}','{}') in account cache",
+                "found account ('{}','{}') in cache",
                 realm.name,
                 player.username
             );
             Ok(Some(account))
         }
         None => {
-            tracing::debug!(
-                "account ('{}','{}') not found in account cache, querying db",
-                realm.name,
-                player.username
-            );
+            // account not found in account cache, query db
             match get_account_from_db(&state.db, realm.id, player.hash).await? {
                 Some(account) => {
                     tracing::debug!(
@@ -353,7 +338,7 @@ pub async fn enlist_player(
     params: &GetProfileParams,
 ) -> Result<Arc<PlayerModel>, ProfileServerError> {
     // todo: do any stateful validation of params now - e.g. check username against blocklist
-    tracing::debug!("creating papers for player '{}'", &params.username);
+    tracing::debug!("creating papers for player '{}'...", &params.username);
     let new_player = PlayerActiveModel {
         hash: ActiveValue::Set(params.hash),
         username: ActiveValue::Set(params.username.to_owned()),
@@ -370,7 +355,7 @@ pub async fn enlist_player(
         .insert(params.hash, arc_player.clone())
         .await;
     tracing::debug!(
-        "inserted papers for player '{}' into player cache",
+        "inserted papers for player '{}' into cache",
         &params.username
     );
     Ok(arc_player)

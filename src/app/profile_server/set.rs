@@ -35,13 +35,13 @@ pub async fn rwr1_set_profile_handler(
     check_realm_is_configured(&state, &params.realm)?;
 
     // get the realm, making it if it doesn't exist yet
-    tracing::info!("locating realm '{}'", &params.realm);
+    tracing::info!("locating realm '{}'...", &params.realm);
     let realm = get_realm(&state, &params.realm, &params.realm_digest).await?;
 
     // tracing::debug!("{data:#?}");
     let mut accounts_to_update: Vec<AccountActiveModel> = Vec::new();
     for player_xml in data.players.iter() {
-        tracing::info!("processing set xml for player '{}'", player_xml.hash);
+        tracing::info!("processing set xml for player '{}'...", player_xml.hash);
         // get the player from cache/db, remembering that get_player does all the account sid/rid verification
         // by itself if it encounters an existing player in the cache or db
         let opt_player = get_player(

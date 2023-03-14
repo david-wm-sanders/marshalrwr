@@ -66,20 +66,6 @@ where
     }
 }
 
-// impl<T> Deref for ValidatedXmlBody<T> {
-//     type Target = T;
-
-//     fn deref(&self) -> &Self::Target {
-//         &self.0
-//     }
-// }
-
-// impl<T> DerefMut for ValidatedXmlBody<T> {
-//     fn deref_mut(&mut self) -> &mut Self::Target {
-//         &mut self.0
-//     }
-// }
-
 pub fn validate_username(username: &str) -> Result<(), ValidationError> {
     if username.contains("  ") {
         return Err(ValidationError::new(

@@ -58,7 +58,7 @@ impl ProfileServerError {
         let mut data_element_start = BytesStart::new("data");
         // push ok="1" for all atm, todo: make more specific via RE of rwr_server to discover ok codes
         data_element_start.push_attribute(("ok", "0"));
-        let issue = match self {
+        let msg = match self {
             ProfileServerError::ValidationError(err) => err.to_string(),
             ProfileServerError::AxumQueryRejection(err) => err.to_string(),
             ProfileServerError::AxumBytesRejection(err) => err.to_string(),
@@ -75,9 +75,9 @@ impl ProfileServerError {
             ProfileServerError::PlayerRidIncorrect(_, _, _, _) => self.to_string(),
             ProfileServerError::PlayerNotFound(_, _, _) => self.to_string(),
         };
-        // escape the issue :D
-        let escaped_issue = escape(&issue).to_string();
-        data_element_start.push_attribute(("issue", escaped_issue.as_str()));
+        // escape the message :D
+        let escaped_msg = escape(&msg).to_string();
+        data_element_start.push_attribute(("msg", escaped_msg.as_str()));
         match error_data_xml_writer.write_event(Event::Empty(data_element_start)) {
             Ok(_) => String::from_utf8(error_data_xml_writer.into_inner().into_inner()).unwrap(),
             Err(err) => {

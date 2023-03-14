@@ -94,7 +94,7 @@ pub async fn rwr1_get_profile_handler(
                         realm.name
                     );
                     let account_xml = make_account_xml(&player, &account)?;
-                    tracing::debug!("{account_xml}");
+                    // tracing::debug!("{account_xml}");
                     tracing::info!(
                         "sending person-profile for '{}' in '{}' to game server",
                         player.username,

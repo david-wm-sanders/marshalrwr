@@ -13,6 +13,7 @@ use validator::Validate;
 use super::super::hasher::rwr1_hash_username;
 use super::errors::ProfileServerError;
 use super::params::GetProfileParams;
+use super::util::USERNAME_BLOCKED_CHARS;
 
 lazy_static! {
     pub static ref RE_HEX_STR: Regex = Regex::new(r"^([0-9A-Fa-f]{2})+$").unwrap();
@@ -78,7 +79,15 @@ pub fn validate_username(username: &str) -> Result<(), ValidationError> {
     if username.ends_with(' ') {
         return Err(ValidationError::new("username ends with a space"));
     }
-    // todo: check for weird characters that aren't control but correspond to weird things in default rwr latin font
+    if !username.chars().all(|c| {
+        c.is_ascii_punctuation() || c.is_ascii_digit() ||
+        (c.is_ascii_alphabetic() && c.is_ascii_uppercase())
+    }) {
+        return Err(ValidationError::new("username must be uppercase|punctuation|digit characters only"))
+    }
+    if username.contains(USERNAME_BLOCKED_CHARS) {
+        return Err(ValidationError::new("username contains forbidden character"))
+    }
     Ok(())
 }
 

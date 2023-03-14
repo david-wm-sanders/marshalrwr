@@ -18,12 +18,13 @@ use super::super::state::AppState;
 use super::errors::ProfileServerError;
 use super::json::{ItemStore, Loadout, KillCombos, CriteriaMonitor, CriteriaMonitors};
 use super::params::GetProfileParams;
-use super::xml::{GetProfileDataXml, PlayerXml, MonitorXml};
+use super::xml::{GetProfileDataXml, PlayerXml};
 use entity::{Account, AccountActiveModel, AccountColumn, AccountModel};
 use entity::{Player, PlayerActiveModel, PlayerModel};
 use entity::{Realm, RealmActiveModel, RealmColumn, RealmModel};
 
 pub const HEADERS: [(HeaderName, &str); 1] = [(header::CONTENT_TYPE, "text/xml")];
+pub const USERNAME_BLOCKED_CHARS: [char; 5] = ['"', '\'', ',', ';', '`'];
 pub const ACCOUNT_COLUMNS: [AccountColumn; 31] = [
     AccountColumn::RealmId,
     AccountColumn::Hash,

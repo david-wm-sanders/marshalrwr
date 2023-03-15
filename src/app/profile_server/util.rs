@@ -16,7 +16,7 @@ use subtle::ConstantTimeEq;
 
 use super::super::state::AppState;
 use super::errors::ProfileServerError;
-use super::json::{CriteriaMonitor, CriteriaMonitors, ItemStore, KillCombos, Loadout};
+use super::json::{ItemStore, Loadout, KillCombos, CriteriaMonitor, CriteriaMonitors};
 use super::params::GetProfileParams;
 use super::xml::{GetProfileDataXml, PlayerXml};
 use entity::{Account, AccountActiveModel, AccountColumn, AccountModel};
@@ -60,14 +60,7 @@ pub const ACCOUNT_COLUMNS: [AccountColumn; 31] = [
 ];
 
 pub fn check_ip_allowlist(state: &AppState, ip: IpAddr) -> Result<(), ProfileServerError> {
-    if !state
-        .config
-        .ps_allowed_ips
-        .iter()
-        .any(|allowed_ip| ip.eq(allowed_ip))
-    {
-        // no address a in the allowed ips vec matches this address addr
-        tracing::error!("ip '{}' is not allowed to get/set profiles", ip);
+    if !state.config.ps_allowed_ips.contains(&ip) {
         return Err(ProfileServerError::ClientAddressNotAllowed(ip));
     }
     Ok(())
@@ -78,12 +71,7 @@ pub fn check_realm_is_configured(state: &AppState, realm: &str) -> Result<(), Pr
     // as we cannot derive the digest from knowing the realm secret and pw, the server expects the realms to be named (e.g. ["INCURSION"]) in the config instead
     // when the first request for a realm is received, it will be created in the db with the digest supplied in the first request
     // this should be fine when the IP allowlist for the profile server endpoints is implemented
-    if !state
-        .config
-        .ps_realms
-        .iter()
-        .any(|realm_name| realm_name == realm)
-    {
+    if !state.config.ps_realms.contains(realm) {
         return Err(ProfileServerError::RealmNotConfigured(String::from(realm)));
     }
     Ok(())
@@ -238,7 +226,11 @@ pub async fn get_player(
     // search for player in cache
     match state.cache.players.get(&player_hash) {
         Some(player) => {
-            tracing::debug!("found player '{}' [{}] in cache", username, player_hash);
+            tracing::debug!(
+                "found player '{}' [{}] in cache",
+                username,
+                player_hash
+            );
             // verify the player sid and rid (digest)
             verify_player_sid_and_rid(player_hash, username, sid, player.sid, rid, &player.rid)?;
             Ok(Some(player))

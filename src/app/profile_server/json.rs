@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use super::xml::{EquippedItemXml, StoredItemXml, EntryXml, MonitorXml};
+use super::xml::{EntryXml, EquippedItemXml, MonitorXml, StoredItemXml};
 
 #[derive(Serialize, Deserialize)]
 pub struct Loadout {
@@ -85,7 +85,7 @@ impl KillCombos {
         Self {
             entries: entries
                 .iter()
-                .map(|entry| (entry.combo, entry.count) )
+                .map(|entry| (entry.combo, entry.count))
                 .collect(),
         }
     }

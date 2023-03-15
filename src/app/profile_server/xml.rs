@@ -5,7 +5,7 @@ use validator::Validate;
 
 use super::{
     errors::ProfileServerError,
-    json::{ItemStore, Loadout, KillCombos, CriteriaMonitors},
+    json::{CriteriaMonitors, ItemStore, KillCombos, Loadout},
     validation::{validate_username, RE_HEX_STR},
 };
 use entity::{AccountModel, PlayerModel};
@@ -214,36 +214,44 @@ impl GetProfileDataXml {
         let stash_json: ItemStore = serde_json::from_str(&account.stash)?;
         // construct monitors
         let kill_combos_json: KillCombos = serde_json::from_str(&account.kill_combos)?;
-        let criteria_monitors_json: CriteriaMonitors = serde_json::from_str(&account.criteria_monitors)?;
-        
+        let criteria_monitors_json: CriteriaMonitors =
+            serde_json::from_str(&account.criteria_monitors)?;
+
         let mut monitors = Vec::new();
         // insert the longest death streak monitor
-        monitors.push(
-            MonitorXml { 
-                name: Some("death streak".to_string()),
-                longest_death_streak: Some(account.longest_death_streak),
-                level: None, ..Default::default() }
-            );
+        monitors.push(MonitorXml {
+            name: Some("death streak".to_string()),
+            longest_death_streak: Some(account.longest_death_streak),
+            level: None,
+            ..Default::default()
+        });
         // insert the kill combos monitor
-        monitors.push(
-            MonitorXml {
-                name: Some("kill combo".to_string()),
-                entries: kill_combos_json.entries.iter().map(|e| EntryXml { combo: e.0, count: e.1 } ).collect(),
-                ..Default::default()
-            }
-        );
+        monitors.push(MonitorXml {
+            name: Some("kill combo".to_string()),
+            entries: kill_combos_json
+                .entries
+                .iter()
+                .map(|e| EntryXml {
+                    combo: e.0,
+                    count: e.1,
+                })
+                .collect(),
+            ..Default::default()
+        });
         // insert the criteria monitors
         for cm in criteria_monitors_json.monitors.iter() {
-            monitors.push(
-                MonitorXml {
-                    name: Some(cm.name.to_owned()),
-                    level: Some(cm.level),
-                    criteria: cm.critera.iter().map(|c| CriteriaXml { count: *c }).collect(),
-                    ..Default::default()
-                }
-            );
+            monitors.push(MonitorXml {
+                name: Some(cm.name.to_owned()),
+                level: Some(cm.level),
+                criteria: cm
+                    .critera
+                    .iter()
+                    .map(|c| CriteriaXml { count: *c })
+                    .collect(),
+                ..Default::default()
+            });
         }
-        
+
         Ok(Self {
             ok: 1,
             person: PersonXml {
@@ -289,7 +297,7 @@ impl GetProfileDataXml {
                     shots_fired: account.shots_fired,
                     throwables_thrown: account.throwables_thrown,
                     rank_progression: account.rank_progression as f32,
-                    monitors
+                    monitors,
                 },
             },
         })

@@ -1,13 +1,10 @@
-use std::{
-    net::IpAddr,
-    str::FromStr,
-};
+use std::{net::IpAddr, str::FromStr};
 
-use serde::{Serialize, Deserialize};
 use figment::{
     providers::{Env, Format, Serialized, Toml},
     Figment,
 };
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AppConfiguration {

@@ -80,13 +80,18 @@ pub fn validate_username(username: &str) -> Result<(), ValidationError> {
         return Err(ValidationError::new("username ends with a space"));
     }
     if !username.chars().all(|c| {
-        c.is_ascii_punctuation() || c.is_ascii_digit() ||
-        (c.is_ascii_alphabetic() && c.is_ascii_uppercase())
+        c.is_ascii_punctuation()
+            || c.is_ascii_digit()
+            || (c.is_ascii_alphabetic() && c.is_ascii_uppercase())
     }) {
-        return Err(ValidationError::new("username must be uppercase|punctuation|digit characters only"))
+        return Err(ValidationError::new(
+            "username must be uppercase|punctuation|digit characters only",
+        ));
     }
     if username.contains(USERNAME_BLOCKED_CHARS) {
-        return Err(ValidationError::new("username contains forbidden character"))
+        return Err(ValidationError::new(
+            "username contains forbidden character",
+        ));
     }
     Ok(())
 }

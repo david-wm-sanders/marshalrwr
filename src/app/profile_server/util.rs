@@ -16,7 +16,7 @@ use subtle::ConstantTimeEq;
 
 use super::super::state::AppState;
 use super::errors::ProfileServerError;
-use super::json::{ItemStore, Loadout, KillCombos, CriteriaMonitor, CriteriaMonitors};
+use super::json::{CriteriaMonitor, CriteriaMonitors, ItemStore, KillCombos, Loadout};
 use super::params::GetProfileParams;
 use super::xml::{GetProfileDataXml, PlayerXml};
 use entity::{Account, AccountActiveModel, AccountColumn, AccountModel};
@@ -226,11 +226,7 @@ pub async fn get_player(
     // search for player in cache
     match state.cache.players.get(&player_hash) {
         Some(player) => {
-            tracing::debug!(
-                "found player '{}' [{}] in cache",
-                username,
-                player_hash
-            );
+            tracing::debug!("found player '{}' [{}] in cache", username, player_hash);
             // verify the player sid and rid (digest)
             verify_player_sid_and_rid(player_hash, username, sid, player.sid, rid, &player.rid)?;
             Ok(Some(player))

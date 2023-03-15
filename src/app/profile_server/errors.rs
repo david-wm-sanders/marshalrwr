@@ -42,6 +42,10 @@ pub enum ProfileServerError {
     ClientAddressNotAllowed(IpAddr),
     #[error("realm '{0}' is not configured")]
     RealmNotConfigured(String),
+    #[error("sid '{0}' not allowed by config")]
+    SidNotAllowed(i64),
+    #[error("sid '{0}' blocked by config")]
+    SidBlocked(i64),
     #[error("realm '{0}' digest '{1}' incorrect")]
     RealmDigestIncorrect(String, String),
     #[error("player '{1}' [hash:{0}] sid {2} mismatch")]
@@ -70,6 +74,8 @@ impl ProfileServerError {
             ProfileServerError::SerdeJsonError(err) => err.to_string(),
             ProfileServerError::ClientAddressNotAllowed(_) => self.to_string(),
             ProfileServerError::RealmNotConfigured(_) => self.to_string(),
+            ProfileServerError::SidNotAllowed(_) => self.to_string(),
+            ProfileServerError::SidBlocked(_) => self.to_string(),
             ProfileServerError::RealmDigestIncorrect(_, _) => self.to_string(),
             ProfileServerError::PlayerSidMismatch(_, _, _, _) => self.to_string(),
             ProfileServerError::PlayerRidIncorrect(_, _, _, _) => self.to_string(),
@@ -137,6 +143,12 @@ impl IntoResponse for ProfileServerError {
             }
             ProfileServerError::RealmNotConfigured(_) => {
                 (StatusCode::BAD_REQUEST, HEADERS, self.to_xml_string())
+            }
+            ProfileServerError::SidNotAllowed(_) => {
+                (StatusCode::FORBIDDEN, HEADERS, self.to_xml_string())
+            }
+            ProfileServerError::SidBlocked(_) => {
+                (StatusCode::FORBIDDEN, HEADERS, self.to_xml_string())
             }
             ProfileServerError::RealmDigestIncorrect(_, _) => {
                 (StatusCode::UNAUTHORIZED, HEADERS, self.to_xml_string())

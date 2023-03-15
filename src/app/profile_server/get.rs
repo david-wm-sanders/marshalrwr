@@ -9,8 +9,8 @@ use super::super::state::AppState;
 use super::errors::ProfileServerError;
 use super::util::HEADERS;
 use super::util::{
-    check_ip_allowlist, check_realm_is_configured, enlist_player, get_account, get_player,
-    get_realm, make_account_xml, make_init_profile_xml,
+    check_ip_allowlist, check_realm_is_configured, check_sid, enlist_player, get_account,
+    get_player, get_realm, make_account_xml, make_init_profile_xml,
 };
 use super::validation::ValidatedQuery;
 
@@ -24,9 +24,10 @@ pub async fn rwr1_get_profile_handler(
 ) -> Result<Response, ProfileServerError> {
     // check that the client addr is an allowed ip
     check_ip_allowlist(&state, addr.ip())?;
-
     // check that the realm has been configured, see fn comments for more detail
     check_realm_is_configured(&state, &params.realm)?;
+    // check if the sid is allowed|blocked
+    check_sid(&state, params.sid)?;
 
     // get the realm, making it if it doesn't exist yet
     tracing::info!("locating realm '{}'...", &params.realm);

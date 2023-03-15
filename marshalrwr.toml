@@ -1,2 +1,4 @@
 ps_realms = ["INCURSION"]
 # ps_allowed_ips = ["10.0.0.1", "10.0.0.2"]
+ps_allowed_sids = [53219938]
+# ps_blocked_sids = [53219938]

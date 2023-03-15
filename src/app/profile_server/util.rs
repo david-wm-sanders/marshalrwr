@@ -89,6 +89,18 @@ pub fn check_realm_is_configured(state: &AppState, realm: &str) -> Result<(), Pr
     Ok(())
 }
 
+pub fn check_sid(state: &AppState, sid: i64) -> Result<(), ProfileServerError> {
+    if !state.config.ps_allowed_sids.is_empty() {
+        if !state.config.ps_allowed_sids.contains(&sid) {
+            return Err(ProfileServerError::SidNotAllowed(sid));
+        }
+    }
+    if state.config.ps_blocked_sids.contains(&sid) {
+        return Err(ProfileServerError::SidBlocked(sid));
+    }
+    Ok(())
+}
+
 pub fn digest_ok(given_digest: &str, valid_digest: &str) -> bool {
     // check the realm digest in constant time mit subtle crate
     // todo: validate that this actually works in constant time XD

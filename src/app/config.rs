@@ -1,4 +1,4 @@
-use std::{net::IpAddr, str::FromStr};
+use std::{collections::HashSet, net::IpAddr, str::FromStr};
 
 use figment::{
     providers::{Env, Format, Serialized, Toml},
@@ -10,6 +10,8 @@ use serde::{Deserialize, Serialize};
 pub struct AppConfiguration {
     pub ps_realms: Vec<String>,
     pub ps_allowed_ips: Vec<IpAddr>,
+    pub ps_allowed_sids: HashSet<i64>,
+    pub ps_blocked_sids: HashSet<i64>,
 }
 
 impl Default for AppConfiguration {
@@ -17,6 +19,8 @@ impl Default for AppConfiguration {
         AppConfiguration {
             ps_realms: Vec::new(),
             ps_allowed_ips: vec![IpAddr::from_str("127.0.0.1").unwrap()],
+            ps_allowed_sids: HashSet::new(),
+            ps_blocked_sids: HashSet::new(),
         }
     }
 }

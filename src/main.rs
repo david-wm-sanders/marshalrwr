@@ -1,43 +1,21 @@
-use std::{
-    net::{IpAddr, SocketAddr},
-    str::FromStr,
-};
+use std::net::SocketAddr;
 
 use axum::{
     routing::{get, post},
     Router,
 };
-use figment::{
-    providers::{Env, Format, Serialized, Toml},
-    Figment,
-};
 use sea_orm::Database;
-use serde::{Deserialize, Serialize};
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 mod app;
+use app::config::AppConfiguration;
 use app::profile_server::{get::rwr1_get_profile_handler, set::rwr1_set_profile_handler};
 use app::signalling::shutdown_signal;
 use app::state::AppState;
 use app::{DB_DEFAULT_URL, VERSION};
 
 use migration::{Migrator, MigratorTrait};
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct AppConfiguration {
-    ps_realms: Vec<String>,
-    ps_allowed_ips: Vec<IpAddr>,
-}
-
-impl Default for AppConfiguration {
-    fn default() -> Self {
-        AppConfiguration {
-            ps_realms: vec![],
-            ps_allowed_ips: vec![IpAddr::from_str("127.0.0.1").unwrap()],
-        }
-    }
-}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -52,17 +30,13 @@ async fn main() -> anyhow::Result<()> {
 
     tracing::info!("starting marshalrwr [v{}]", VERSION.unwrap_or("n/a"));
     tracing::info!("loading configuration...");
-    let app_config: AppConfiguration =
-        Figment::from(Serialized::defaults(AppConfiguration::default()))
-            .merge(Toml::file("marshalrwr.toml"))
-            .merge(Env::prefixed("MRWR_"))
-            .extract()?;
+    let app_config = AppConfiguration::build()?;
     tracing::debug!("{app_config:?}");
 
     tracing::debug!("setting up application state...");
     let db_connection = Database::connect(format!("{DB_DEFAULT_URL}?mode=rwc")).await?;
 
-    tracing::info!("performing migrations... :D");
+    tracing::info!("performing migrations (if any)... :D");
     Migrator::up(&db_connection, None).await?;
 
     let app_state = AppState::new(app_config, db_connection);

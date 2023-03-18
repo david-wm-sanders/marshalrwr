@@ -6,27 +6,20 @@ use axum::{
 };
 use sea_orm::Database;
 use tower_http::trace::TraceLayer;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 mod app;
 use app::config::AppConfiguration;
 use app::profile_server::{get::rwr1_get_profile_handler, set::rwr1_set_profile_handler};
 use app::signalling::shutdown_signal;
 use app::state::AppState;
+use app::tracing::init_tracing_subscriber;
 use app::{DB_DEFAULT_URL, VERSION};
 
 use migration::{Migrator, MigratorTrait};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // setup tracing subscriber first and foremost
-    tracing_subscriber::registry()
-        .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "marshalrwr=debug,tower_http=debug".into()),
-        )
-        .with(tracing_subscriber::fmt::layer())
-        .init();
+    init_tracing_subscriber();
 
     tracing::info!("starting marshalrwr [v{}]", VERSION.unwrap_or("n/a"));
     tracing::info!("loading configuration...");

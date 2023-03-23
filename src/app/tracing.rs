@@ -136,22 +136,23 @@ where
         if lvl != &tracing::Level::INFO {
             if self.display_event_fields {
                 let event_field_style = Style::new().dimmed().italic();
-                if writer.has_ansi_escapes() {
-                    write!(writer, "{}", event_field_style.prefix())?;
-                }
-                writer.write_char('{')?;
+
                 // output the event fields, based on tracing_subscriber Compact FormatEvent impl
                 for span in ctx.event_scope().into_iter().flat_map(registry::Scope::from_root) {
                     let exts = span.extensions();
                     if let Some(fields) = exts.get::<FormattedFields<N>>() {
                         if !fields.is_empty() {
+                            if writer.has_ansi_escapes() {
+                                write!(writer, "{}", event_field_style.prefix())?;
+                            }
+                            writer.write_char('{')?;
                             write!(writer, "{}", &fields.fields)?;
+                            writer.write_char('}')?;
+                            if writer.has_ansi_escapes() {
+                                write!(writer, "{}", event_field_style.suffix())?;
+                            }
                         }
                     }
-                }
-                writer.write_char('}')?;
-                if writer.has_ansi_escapes() {
-                    write!(writer, "{}", event_field_style.suffix())?;
                 }
             }
         }

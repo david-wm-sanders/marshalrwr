@@ -25,7 +25,7 @@ pub fn init_tracing_subscriber() {
         .with(
             tracing_subscriber::fmt::layer()
                 .with_span_events(FmtSpan::NEW | FmtSpan::CLOSE)
-                // .event_format(ConsoleFormatter::default()),
+                .event_format(ConsoleFormatter::default()),
         )
         .init();
 }
@@ -83,14 +83,19 @@ impl ConsoleFormatter {
         }
         let emoji = match level {
             &tracing::Level::ERROR => "❌",
-            &tracing::Level::WARN => "⚠ ",
-            &tracing::Level::INFO => "ℹ ",
+            &tracing::Level::WARN => "⚠",
+            &tracing::Level::INFO => "ℹ",
             &tracing::Level::DEBUG => "🔎",
-            &tracing::Level::TRACE => "⚙ ",
+            &tracing::Level::TRACE => "⚙",
         };
+        let emoji_width = unicode_width::UnicodeWidthStr::width_cjk(emoji);
+        let num_spaces = 3 - emoji_width;
         write!(writer, "{}", emoji)?;
-        // insert the space ready for next column
-        writer.write_char(' ')
+        // insert the space(s) ready for next column
+        for _ in 0..num_spaces {
+            writer.write_char(' ')?;
+        }
+        Ok(())
     }
 }
 

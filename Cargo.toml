@@ -29,6 +29,7 @@ quick-xml = { version = "0.27.1", features = ["serialize", "async-tokio"] }
 percent-encoding = "2.2.0"
 serde_json = "1.0.94"
 nu-ansi-term = "0.46.0"
+unicode-width = "0.1.10"
 
 migration = { path = "./src/migration" }
 entity = { path = "./src/entity" }

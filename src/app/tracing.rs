@@ -8,7 +8,7 @@ use tracing_subscriber::fmt::{
     format::{self, FormatEvent, FormatFields},
     FmtContext, FormattedFields,
 };
-use tracing_subscriber::registry::LookupSpan;
+use tracing_subscriber::registry::{LookupSpan, self};
 use tracing_subscriber::{
     fmt::format::{FmtSpan, Writer},
     layer::SubscriberExt,
@@ -51,7 +51,7 @@ impl Default for ConsoleFormatter {
             display_thread_name: false,
             display_filename: false,
             display_line_number: false,
-            display_event_fields: false,
+            display_event_fields: true,
         }
     }
 }
@@ -111,11 +111,12 @@ where
         event: &Event<'_>,
     ) -> fmt::Result {
         let metadata = event.metadata();
+        let lvl = metadata.level();
 
         // write timestamp
         self.format_timestamp(&mut writer)?;
         // write level
-        self.format_level(&mut writer, metadata.level())?;
+        self.format_level(&mut writer, lvl)?;
         // write target
         if self.display_target {
             write!(&mut writer, "{}:", metadata.target())?;
@@ -129,6 +130,31 @@ where
 
         // write the message?!
         ctx.format_fields(writer.by_ref(), event)?;
+        writer.write_char(' ')?;
+        
+        // include event fields if not INFO level
+        if lvl != &tracing::Level::INFO {
+            if self.display_event_fields {
+                let event_field_style = Style::new().dimmed().italic();
+                if writer.has_ansi_escapes() {
+                    write!(writer, "{}", event_field_style.prefix())?;
+                }
+                writer.write_char('{')?;
+                // output the event fields, based on tracing_subscriber Compact FormatEvent impl
+                for span in ctx.event_scope().into_iter().flat_map(registry::Scope::from_root) {
+                    let exts = span.extensions();
+                    if let Some(fields) = exts.get::<FormattedFields<N>>() {
+                        if !fields.is_empty() {
+                            write!(writer, "{}", &fields.fields)?;
+                        }
+                    }
+                }
+                writer.write_char('}')?;
+                if writer.has_ansi_escapes() {
+                    write!(writer, "{}", event_field_style.suffix())?;
+                }
+            }
+        }
 
         // finish by ending the line
         writeln!(writer)

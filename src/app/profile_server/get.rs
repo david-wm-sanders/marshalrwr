@@ -31,7 +31,8 @@ pub async fn rwr1_get_profile_handler(
 
     // get the realm, making it if it doesn't exist yet
     tracing::info!("locating realm '{}'...", &params.realm);
-    let realm = get_realm(&state, &params.realm, &params.realm_digest).await?;
+    let realm_lock = get_realm(&state, &params.realm, &params.realm_digest).await?;
+    let realm = realm_lock.read().await;
 
     // find the player, if any
     tracing::info!(
@@ -61,6 +62,7 @@ pub async fn rwr1_get_profile_handler(
                 &player.username,
                 &realm.name
             );
+            drop(realm);
             // return xml response
             Ok((StatusCode::OK, HEADERS, init_profile_xml).into_response())
         }
@@ -84,6 +86,7 @@ pub async fn rwr1_get_profile_handler(
                         player.username,
                         realm.name
                     );
+                    drop(realm);
                     // return xml response
                     Ok((StatusCode::OK, HEADERS, init_profile_xml).into_response())
                 }
@@ -101,6 +104,7 @@ pub async fn rwr1_get_profile_handler(
                         player.username,
                         realm.name
                     );
+                    drop(realm);
                     Ok((StatusCode::OK, HEADERS, account_xml).into_response())
                 }
             }

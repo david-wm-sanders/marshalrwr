@@ -3,13 +3,14 @@ use std::time::Duration;
 
 use moka::future::Cache;
 use sea_orm::DatabaseConnection;
+use tokio::sync::RwLock;
 
 use crate::AppConfiguration;
 use entity::{AccountModel, PlayerModel, RealmModel};
 
 #[derive(Clone)]
 pub struct CacheManager {
-    pub realms: Cache<String, Arc<RealmModel>>,
+    pub realms: Cache<String, Arc<RwLock<RealmModel>>>,
     pub players: Cache<i64, Arc<PlayerModel>>,
     pub accounts: Cache<(i32, i64), Arc<AccountModel>>,
 }
@@ -23,7 +24,8 @@ impl Default for CacheManager {
                     .max_capacity(32)
                     .time_to_live(Duration::from_secs(60*60))
                     .time_to_idle(Duration::from_secs(15*60))
-                    .eviction_listener_with_queued_delivery_mode(|key, value: Arc<RealmModel>, removal_cause| {
+                    .eviction_listener_with_queued_delivery_mode(|key, value: Arc<RwLock<RealmModel>>, removal_cause| {
+                        let value = value.blocking_read();
                         match removal_cause {
                             moka::notification::RemovalCause::Expired =>
                                 tracing::debug!("realm '{}' [{}] expired and was evicted from the cache", &key, value.id),
@@ -34,6 +36,7 @@ impl Default for CacheManager {
                             moka::notification::RemovalCause::Size =>
                                 tracing::debug!("realm '{}' [{}] was evicted from the cache due to size constraints", &key, value.id)
                         }
+                        drop(value);
                     })
                     .build(),
             players:

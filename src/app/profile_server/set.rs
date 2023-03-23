@@ -36,7 +36,8 @@ pub async fn rwr1_set_profile_handler(
 
     // get the realm, making it if it doesn't exist yet
     tracing::info!("locating realm '{}'...", &params.realm);
-    let realm = get_realm(&state, &params.realm, &params.realm_digest).await?;
+    let realm_lock = get_realm(&state, &params.realm, &params.realm_digest).await?;
+    let realm = realm_lock.write().await;
 
     // tracing::debug!("{data:#?}");
     let mut accounts_to_update: Vec<AccountActiveModel> = Vec::new();
@@ -106,6 +107,7 @@ pub async fn rwr1_set_profile_handler(
         res.last_insert_id.1
     );
 
+    drop(realm);
     // respond to the game server
     Ok((StatusCode::OK, HEADERS, "<data ok=\"1\" />").into_response())
 }

@@ -1,6 +1,7 @@
 use std::io::Cursor;
 use std::net::IpAddr;
 use std::sync::Arc;
+use tokio::sync::{RwLock, RwLockReadGuard};
 
 use axum::http::header::{self, HeaderName};
 use quick_xml::se::Serializer as QuickXmlSerializer;
@@ -154,14 +155,17 @@ pub async fn get_realm(
     state: &AppState,
     realm_name: &str,
     realm_digest: &str,
-) -> Result<Arc<RealmModel>, ProfileServerError> {
+) -> Result<Arc<RwLock<RealmModel>>, ProfileServerError> {
     // search for realm in cache
     match state.cache.realms.get(realm_name) {
-        Some(realm) => {
+        Some(realm_lock) => {
+            let _realm_lock = realm_lock.clone();
+            let realm = _realm_lock.read().await;
             tracing::debug!("located realm '{realm_name}' [{}] in cache", realm.id);
             // verify the realm digest
             verify_realm_digest(realm_name, realm_digest, &realm.digest)?;
-            Ok(realm)
+            drop(realm);
+            Ok(realm_lock)
         }
         None => {
             // realm not found in cache, query db
@@ -172,7 +176,7 @@ pub async fn get_realm(
                         realm.id
                     );
                     // insert the model into the realm cache
-                    let arc_model = Arc::new(realm.clone());
+                    let arc_model = Arc::new(RwLock::new(realm.clone()));
                     state
                         .cache
                         .realms
@@ -194,7 +198,7 @@ pub async fn get_realm(
                     let realm = new_realm.insert(&state.db).await?;
                     tracing::debug!("created realm '{}' [{}] in db", realm_name, realm.id);
                     // insert the model into the realm cache
-                    let arc_model = Arc::new(realm);
+                    let arc_model = Arc::new(RwLock::new(realm));
                     state
                         .cache
                         .realms
@@ -285,7 +289,7 @@ pub async fn get_account_from_db(
 
 pub async fn get_account(
     state: &AppState,
-    realm: &Arc<RealmModel>,
+    realm: &RwLockReadGuard<'_, RealmModel>,
     player: &Arc<PlayerModel>,
 ) -> Result<Option<Arc<AccountModel>>, ProfileServerError> {
     // search for account in cache

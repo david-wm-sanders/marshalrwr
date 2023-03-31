@@ -42,7 +42,7 @@ async fn main() -> anyhow::Result<()> {
         .layer(TraceLayer::new_for_http());
 
     // run it
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    let addr = SocketAddr::from(([127, 0, 0, 1], 4321));
     tracing::info!("listening on {}...", addr);
     axum::Server::bind(&addr)
         .serve(application_router.into_make_service_with_connect_info::<SocketAddr>())

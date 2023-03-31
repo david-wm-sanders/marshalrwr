@@ -1,11 +1,11 @@
 // declare include paths
 #include "path://media/packages/vanilla/scripts"
-#include "path://media/packages/_marshalrwr_test_pkg/scripts"
+#include "path://media/packages/_marshalrwr_{name}_test_pkg/scripts"
 
 #include "gamemode_invasion.as"
 
 // --------------------------------------------
-void main(dictionary@ inputData) {
+void main(dictionary@ inputData) {{
     _setupLog("dev_verbose");
     XmlElement inputSettings(inputData);
     _log("debug: inputSettings = ");
@@ -13,9 +13,9 @@ void main(dictionary@ inputData) {
     UserSettings settings;
     // HACK: [] set the username from the local inputData as this main begins at campaign entry script
     string username = "";
-    if (!inputData.get("username", username)) {
+    if (!inputData.get("username", username)) {{
         _log("username key not in inputData dict");
-    }
+    }}
     settings.m_username = username;
     settings.m_factionChoice = 0;                   // 0 (greenbelts), 1 (graycollars), 2 (brownpants)
     settings.m_playerAiCompensationFactor = 1.0;
@@ -36,21 +36,21 @@ void main(dictionary@ inputData) {
     settings.m_testingToolsEnabled = true;
 
 
-    array<string> overlays = { "media/packages/invasion", "media/packages/_marshalrwr_test_pkg" };
+    array<string> overlays = {{ "media/packages/invasion", "media/packages/_marshalrwr_{name}_test_pkg" }};
     settings.m_overlayPaths = overlays;
 
     // HACK: [] don't automatically start a server for  testing
     settings.m_startServerCommand = """
 <command class='start_server'
-    server_name='incursion marshalrwr test'
-    server_port='1234'
-    profile_server_url='127.0.0.1:3000/'
+    server_name='marshalrwr test {name}'
+    server_port='{port}'
+    profile_server_url='127.0.0.1:4321/'
     realm='INCURSION'
     realm_secret='ilmoittautua'
     realm_password='test12345'
     comment='custom profile server testing'
     url=''
-    register_in_serverlist='1'
+    register_in_serverlist='{register}'
     mode='COOP'
     persistency='forever'
     max_players='8'>
@@ -62,13 +62,13 @@ void main(dictionary@ inputData) {
     GameModeInvasion metagame(settings);
     metagame.init();
     // HACK: [] add local player as admin for easy testing, hacks, etc
-    if (!metagame.getAdminManager().isAdmin(metagame.getUserSettings().m_username)) {
+    if (!metagame.getAdminManager().isAdmin(metagame.getUserSettings().m_username)) {{
         metagame.getAdminManager().addAdmin(metagame.getUserSettings().m_username);
-    }
+    }}
 
 
     metagame.run();
     metagame.uninit();
 
     _log("ending execution");
-}
+}}
